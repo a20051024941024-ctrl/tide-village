@@ -2824,3 +2824,4 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 .taxibar .tx{font-weight:700;color:#26445c;font-size:13px;line-height:1.35;text-align:center}
 .taxibar .tbtn{flex:none;white-space:nowrap}
 @keyframes taxiIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+#w2map.nz .w2m-ppl,#w2map.nz .w2m-train{transition:none}

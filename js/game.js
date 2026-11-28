@@ -1582,7 +1582,7 @@ function art2Tint(mat, tint){ if (!tint || !mat || !mat.map || !mat.map.image) r
   const m2 = mat.clone(); m2.map = tx; return (Art2.tm[key] = m2); }
 function art2World(name, x, z, o){ const g = new THREE.Group(); g.position.set(x, (o && o.wy != null) ? o.wy : groundHeight(x, z), z); g.rotation.y = (o && o.ry) || 0; g.userData.keep = true; g.userData.dyn = true; scene.add(g); art2Add(g, name, Object.assign({}, o, { ry: 0 })); return g; }
 /* 直式掛牌：一根柱子伸出橫桿，掛一塊木牌，字由上往下 */
-function art2Sign(g, text, icon, x, z){ const chars = [...String(text)], n = chars.length + (icon ? 1 : 0), cv = document.createElement('canvas'); cv.width = 112; cv.height = 28 + n * 92; const c = cv.getContext('2d');
+function art2Sign(g, text, icon, x, z){ if (g.userData && g.userData.noSign) return;   /* v970 新主島門口已經有直式掛牌的房子：不再掛第二塊 */ const chars = [...String(text)], n = chars.length + (icon ? 1 : 0), cv = document.createElement('canvas'); cv.width = 112; cv.height = 28 + n * 92; const c = cv.getContext('2d');
   c.fillStyle = '#5c2320'; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#f6ecd2'; c.fillRect(8, 8, cv.width - 16, cv.height - 16); c.strokeStyle = '#c9a24a'; c.lineWidth = 3; c.strokeRect(13, 13, cv.width - 26, cv.height - 26);
   c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#3a1c18'; let y = 14 + 46; if (icon){ c.font = '64px sans-serif'; c.fillText(icon, 56, y); y += 92; } c.font = 'bold 72px sans-serif'; for (const ch of chars){ c.fillText(ch, 56, y + 4); y += 92; }
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; const H = Math.min(2.5, 0.42 * n + 0.14), Wd = H * cv.width / cv.height, top = 3.25, wood = new THREE.MeshStandardMaterial({ color: '#5a2c26', roughness: 0.85 });
@@ -1820,7 +1820,7 @@ function twMuseum(g){ const K = twKit(g), { M, add, B, plane, TM } = K, w = 6.2,
   { const ax = -2.75, az = 1.6, ir = M('#3a4048', 0.6), an = new THREE.Group(); an.position.set(ax, PY + 0.2, az); an.rotation.set(0, 0.5, 0.12); an.userData.dyn = true; g.add(an); B(0.9, 0.2, 0.7, stone, ax, PY + 0.1, az);
     const A = (geo, x, y, z) => { const k = new THREE.Mesh(geo, ir); k.position.set(x, y, z); k.castShadow = true; k.userData.dyn = true; an.add(k); return k; }; A(new THREE.BoxGeometry(0.12, 1.25, 0.12), 0, 0.75, 0); A(new THREE.BoxGeometry(0.7, 0.1, 0.1), 0, 1.2, 0); A(new THREE.TorusGeometry(0.11, 0.035, 6, 12), 0, 1.47, 0); A(new THREE.TorusGeometry(0.5, 0.07, 6, 14, Math.PI), 0, 0.62, 0).rotation.z = Math.PI; for (const s of [-1, 1]){ const f = A(new THREE.ConeGeometry(0.13, 0.3, 4), s * 0.52, 0.72, 0); f.scale.z = 0.5; }
     posts([[-3.3, 2.3], [-2.2, 2.3], [-2.2, 1.25]]); }
-  { const bx = 2.55, bz = 1.78, bg = new THREE.Group(), bm = twBoatGeo().clone(); bg.add(bm); bg.scale.setScalar(0.3); bg.position.set(bx, PY + 0.52, bz); bg.rotation.y = Math.PI / 2 + 0.12; bg.userData.dyn = true; g.add(bg); for (const sx of [-0.45, 0.45]){ B(0.12, 0.3, 0.7, wood, bx + sx, PY + 0.15, bz); }
+  { const bx = 2.55, bz = 1.78, bg = new THREE.Group(), bm = twBoatGeo().clone(); bg.add(bm); bg.scale.setScalar(0.3); bg.position.set(bx, PY + 0.3, bz);   /* v970 作者：博物館的船懸空 → 船底貼在木架上 */ bg.rotation.y = Math.PI / 2 + 0.12; bg.userData.dyn = true; g.add(bg); for (const sx of [-0.45, 0.45]){ B(0.12, 0.3, 0.7, wood, bx + sx, PY + 0.15, bz); }
     posts([[1.65, 1.3], [1.65, 2.35], [3.35, 2.35]]); }
   art2Sign(g, '海洋博物館', '🏛️', w / 2 + 0.75, zf + 1.2); }
 /* v478 涼亭（照作者的設計圖）：六角亭。灰白石頭基座和石階、六根紅柱子（石頭柱礎）、橘色瓦片的六角攢尖屋頂加一顆寶珠、白色屋簷、四面石欄杆，中間一張石桌五張石凳。取代試玩版裡粉紅屋頂的聊天亭。 */
@@ -18509,7 +18509,7 @@ function w2mClamp(){ const mw = W2M.W * W2M.s, mh = W2M.H * W2M.s; W2M.ox = Math
 function w2mCenterMe(){ const M = W2M.M, px = (me.pos.x - M.x0) * M.k, pz = (me.pos.z - M.z0) * M.k; W2M.ox = W2M.vw / 2 - px * W2M.s; W2M.oy = W2M.vh / 2 - pz * W2M.s; w2mClamp(); }
 function w2mPan(){ W2M.el.querySelector('.w2mw').style.transform = `translate(${W2M.ox}px,${W2M.oy}px)`; }
 function w2mZoom(ns, cx, cy, live){ ns = clamp(ns, W2M.s0, W2M.s0 * 3.2); const k = ns / W2M.s; W2M.ox = cx - (cx - W2M.ox) * k; W2M.oy = cy - (cy - W2M.oy) * k; W2M.s = ns; w2mClamp(); w2mLayout(!live); }
-function w2mLayout(dc){ const V = W2M.el, s = W2M.s; V.querySelector('.w2mcv').style.width = W2M.W * s + 'px'; V.querySelector('.w2mcv').style.height = W2M.H * s + 'px'; const ln = V.querySelector('.w2ml'); ln.setAttribute('width', W2M.W * s); ln.setAttribute('height', W2M.H * s);
+function w2mLayout(dc){ const V = W2M.el, s = W2M.s; V.classList.add('nz'); clearTimeout(W2M.nzT); W2M.nzT = setTimeout(() => V.classList.remove('nz'), 600);   /* v970 作者：「橘色的字會隨放大縮小亂動」→ 放大縮小的時候村民、小火車直接跳到新位置，不要慢慢滑 */ V.querySelector('.w2mcv').style.width = W2M.W * s + 'px'; V.querySelector('.w2mcv').style.height = W2M.H * s + 'px'; const ln = V.querySelector('.w2ml'); ln.setAttribute('width', W2M.W * s); ln.setAttribute('height', W2M.H * s);
   for (const o of W2M.mk){ o.el.style.left = o.p[0] * s + 'px'; o.el.style.top = o.p[1] * s + 'px'; } w2mPan(); w2mTick(); if (dc) w2mDeclutter(); else { clearTimeout(W2M.dc); W2M.dc = setTimeout(w2mDeclutter, 150); } }
 /* 字不會疊在一起 */
 function w2mDeclutter(){ const V = W2M.el; if (!V) return; const s = W2M.s, near = s > W2M.s0 * 1.45, ln = V.querySelector('.w2ml'); ln.innerHTML = ''; V.classList.toggle('near', near);
@@ -22137,7 +22137,7 @@ function renderOrders(body){
 function w2SetWaterMask(tex, cx, cz, w, h){ const U = waterSurface.material.uniforms; if (tex){ U.uMask.value = tex; U.uMC.value.set(cx, cz); U.uMS.value.set(w, h); } else { U.uMask.value = waterSurface.userData.mask0; U.uMC.value.set(0, 0); U.uMS.value.set(150, 150); waterSurface.position.x = 0; waterSurface.position.z = 0; } }
 function w2Boot(){ if (W2 || W2ing) return; W2ing = true; if (Math.hypot(me.pos.x, me.pos.z) < 260) w2Fade(true);
   import('./world2.js').then(m => { W2 = m.init({ THREE, scene, camera, me, colliders, mat, Quality, DayNight, waterSurface, mergeGeometries, setWaterMask: w2SetWaterMask,
-      tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null, sign: art2Sign, loadGLB: url => new GLTFLoader().loadAsync(url) });   /* v919 村子現有的街屋做法和模型也給新主島用 */
+      tw: ART2 ? { house: twHouse, cottage: twCottage, office: twOffice, museum: twMuseum, canteen: twCanteen, market: twMarket, merge: twMerge, boat: () => twBoatGeo().clone() } : null, art2Add: ART2 ? art2Add : null, sign: art2Sign, loadGLB: url => new GLTFLoader().loadAsync(url) });   /* v919 村子現有的街屋做法和模型也給新主島用 */
     W2S.home = true; if (Math.hypot(me.pos.x, me.pos.z) < 260 || W2.near(me.pos.x, me.pos.z)){ const [x, z] = W2.spawn; W2.warm(x, z); me.pos.set(x, groundHeight(x, z), z); me.baseY = me.pos.y; me.rot = Math.PI; Jump.gy = me.baseY; pushPresence(true); }   /* v960 在舊村子（或剛進遊戲）的人都到新主島；在外島的人留在外島，回來時回新主島 */ w2Fade(false); for (const st of W2.seats || []) CHAIRS.push(Object.assign({}, st));   /* v936 作者：「坐在這裡看螢幕頭不要抬起來，而且看的也很奇怪歪歪的」→ 看板前的長椅不再用抬頭看的鏡頭，坐下跟一般長椅一樣 */ for (const st of W2.benches || []) CHAIRS.push(Object.assign({}, st));   /* v929 森林裡的長椅（護林員小屋的走廊） */   /* 大看板前面的長椅：可以坐，坐下抬頭看 */ }).catch(e => { console.warn('world2', e); W2ing = false; w2Fade(false); }); }
 /* v960 新主島載入前先蓋一層淡出，不會先看到舊村子再跳過去 */
 function w2Fade(on){ const fx = $('#fadeFx'); if (!fx) return; if (on){ fx.classList.add('on'); w2Fade.t = setTimeout(() => fx.classList.remove('on'), 20000); } else { clearTimeout(w2Fade.t); setTimeout(() => fx.classList.remove('on'), 300); } }
@@ -24828,6 +24828,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u970', d:'11/28', items:[['🍱','潮汐食堂換成真的食堂門面：開放式店面、紅燈籠、圓桌紅凳、爐台冒蒸氣、活魚缸'], ['🌉','森林步道的小木橋改成在河岸落地，不再壓到鐵軌，後面接平交道；警告牌不會立在橋上'], ['🏛️','博物館門口的小漁船放回木架上，不再懸空；門口只留一塊直式招牌'], ['🛣️','路口轉角修成圓弧，人行道不會有尖角伸進路裡；水族館旁邊那條尖尖的草地鋪平了'], ['🗺️','地圖放大縮小時，村民和小火車的圖示不會再亂飄']] },
   { id:'u969', d:'11/28', items:[['🧓','阿伯（老校工）也搬到新主島了：在村公所西邊的池子旁邊釣魚，走過去可以跟他聊天']] },
   { id:'u968', d:'11/28', items:[['🎱','東北邊的遊樂園拿掉，換成一棟「潮汐娛樂館」：撞球館和釣蝦場都在裡面，招牌晚上會一閃一閃'], ['🚧','鐵軌上的木板拿掉，改成真的平交道：水泥地面、鐵條、紅白叉叉的警告牌和黃黑柱子'], ['🏟️','體育場外面換成白色的牆和窗戶，看台座位有藍黃紅三種顏色'], ['👋','一進遊戲，村民就已經在新主島上了，不用等'], ['📱','手機橫拿時，左邊的「今天」先收成一行，點一下才打開；低畫質時噴水池和大看板用比較輕的模型，比較不會卡']] },
   { id:'u967', d:'11/28', items:[['🏛️','村公所和博物館往後挪，門口不再壓到圓環的車道；路和步道跨過鐵軌的地方鋪了木板平交道'], ['🔄','路的盡頭（西邊居民區、港口）做了圓形的迴車道；撞球館的門重新掛到一間真的房子上']] },
