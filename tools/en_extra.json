@@ -9523,5 +9523,13 @@
  "地圖點地方可以叫潮搭Go：司機阿速沿著車道開到你附近的上車處，載你過去；不想等可以按「直接到」": "Tap a place on the map to call TIDEGO: driver Asu drives along the roads to the pickup spot near you and takes you there. Don't want to wait? Press \"Go now\"",
  "四個大路口有紅綠燈，車子和村民都會等紅燈": "The four big intersections have traffic lights, and both cars and villagers wait for the red",
  "潮搭Go 的車兩側貼著貼紙，輪子會轉，晚上會開車頭燈": "TIDEGO cars have stickers on both sides, their wheels turn, and the headlights come on at night",
- "百年生態池和石滬的魚搬到新主島了：河裡有琵琶鼠魚、革胡子鯰、泰國鱧、鱷雀鱔，紅樹林有攀鱸、食蚊魚，溪裡有白子孔雀魚，珊瑚礁有蘇眉魚": "The fish from the Century Pond and the stone weir moved to the new island: plecos, walking catfish, giant snakeheads and alligator gar in the river; climbing perch and mosquitofish in the mangroves; albino guppies in the creek; and the humphead wrasse on the coral reef"
+ "百年生態池和石滬的魚搬到新主島了：河裡有琵琶鼠魚、革胡子鯰、泰國鱧、鱷雀鱔，紅樹林有攀鱸、食蚊魚，溪裡有白子孔雀魚，珊瑚礁有蘇眉魚": "The fish from the Century Pond and the stone weir moved to the new island: plecos, walking catfish, giant snakeheads and alligator gar in the river; climbing perch and mosquitofish in the mangroves; albino guppies in the creek; and the humphead wrasse on the coral reef",
+ "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。司機阿速會開潮搭Go 到你旁邊的路邊，站在原地等就好；離大路太遠的話，跟著箭頭走到車子旁邊就會上車。不想等就按「⚡ 直接到」。": "Going somewhere far: open the map, tap the place and press \"🚕 Call a ride\". Driver Asu brings the TIDEGO car to the road right next to you — just wait where you are. If you're far from the main roads, follow the arrow to the car to get in. Don't want to wait? Press \"⚡ Go now\".",
+ "叫車以後車子會開到你旁邊的路邊，到了會等你 90 秒。": "After you call, the car comes to the road next to you and waits 90 seconds.",
+ "🚕 阿速開過來了，在原地等一下就好": "🚕 Asu is on the way — just wait where you are",
+ "🚕 車到了！走到車子旁邊就會上車": "🚕 Your car is here! Walk up to it to get in",
+ "叫潮搭Go 改成站在原地等：車子會開到你旁邊的路邊，不用再走去上車處": "Calling TIDEGO now works where you stand: the car comes to the road next to you, no need to walk to a pickup spot",
+ "車道重新畫過：黃線和白線在路口、斑馬線前面會斷開；水族館和體育場外面多了一圈路，把路接起來，不會再穿過建築": "Road markings redone: yellow and white lines now stop at intersections and before crosswalks, and new roads loop around the aquarium and stadium so roads connect instead of running into the buildings",
+ "體育場的看台擋起來了，不會再走進牆裡": "The stadium stands are solid now, so you can't walk into the walls",
+ "車子到了會等你 90 秒。": "The car waits 90 seconds once it arrives."
 }
