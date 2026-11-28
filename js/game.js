@@ -2393,7 +2393,7 @@ const SIGN_KIND = { school:{ icon:'〰️', name:'漣漪', what:'小魚群' }, s
 const PRED_RE = /shark|marlin|mahi|tuna|barracuda|trevally|yellowtail|bonito|amberjack|kingfish|sailfish|orca|greatwhite/;
 function sigClass(f){ const b = f.of || f.id; if (BOTTOM_FISH.has(b)) return 'bottom'; if (LURE_FISH.has(b) || PRED_RE.test(b)) return 'pred'; if (BIG_FISH.has(b) || (f.max || 0) >= 8) return 'shadow'; return 'school'; }
 function sigM(a){ const m = (a * 9301 + 49297) % 233280; return (m * 9301 + 49297) % 233280; }   /* 算兩次才會散開（伺服器 _sign_m 一樣） */
-function signSpotOk(s){ return !!(s && s.dir && !SIGN_OFF.has(s.id) && SPOT_BY_ID[s.id] === s); }
+function signSpotOk(s){ return false; }   /* v1009 作者：「還不如靠玩家經驗」→ 海面上的徵兆整個不畫、不算了（伺服器 266 也不算），改成水裡的地形（HAB_Z） */
 function signsAt(spot, slot){ if (!signSpotOk(spot)) return []; const key = spot.id + ':' + slot; signsAt.c = signsAt.c || {}; if (signsAt.c[key]) return signsAt.c[key];
   const kinds = SIGN_ORDER.filter(k => (spot.fish || []).some(id => { const f = FISH_BY_ID[id]; return f && !f.of && sigClass(f) === k; })); if (!kinds.length) return (signsAt.c[key] = []);
   let sc = 0; for (const ch of spot.id) sc += ch.charCodeAt(0);
@@ -7849,11 +7849,12 @@ function doCast(){ if (rec.rod === 'king') setTimeout(() => { rodTipFx('#ffd36a'
   me.bobPos.copy(to); me.bobState = 'fly';
   F.sig = null; { const h = signSpotOk(s) ? signHit(s, to.x, to.z) : null; if (h && h.scare){ Signs.scared.add(h.g.key); setTimeout(() => { flash(`砸太近了，${SIGN_KIND[h.g.k].what}被嚇跑了。要拋在旁邊一點`, 1.8); }, 650); } else if (h){ F.sig = h.g.k; setTimeout(() => toast(`落在${SIGN_KIND[h.g.k].icon}${SIGN_KIND[h.g.k].name}旁邊，${SIGN_KIND[h.g.k].what}比較容易上鉤`), 650); } }
   me.flying = { from, to, t:0, delay:0.17, dur: 0.42 + c * 0.6, h: 0.35 + c * 1.0, done(){ SFX.plop(); } };   /* v660 作者：「線不能依據出力決定丟多遠或動畫嗎」→ 輕拋飛得快又低、全力一甩飛比較久、弧線高一點 */   /* v519 作者：「甩竿出去線應該直直往前飛」→ 拋物線壓低（以前最高 2.8 公尺，現在 1.2），線往前射出去 */ me.windup = 0; me.castT = 0;
-  F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z));
+  F.chumB = chumBonus(chumAt(to.x, to.z), s.id, secretAt(to.x, to.z)); F.habK = myBoat || s.wild ? null : habAt(to.x, to.z);
   F.roll = null; F.rollWait = 0; F.pre = null; F.probe = null; F.lastNib = 0;
   if (s.wild){ F.pre = wildPickFish(); }   /* v593 荒島：手機自己抽（不經過伺服器、不進村子的紀錄） */
   else if (!Cloud.on){ let pf = pickFish(s, c); if (s.id === 'shrimp' && sevActive() && Math.random() < SEV_P) pf = FISH_BY_ID[Sev.ev.fish]; F.pre = pf; }   /* 沒連線：拋竿時就先決定（才能讓魚游過來） */
-  if (Cloud.on && !s.wild){ const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending'; F.rollErr = ''; F.hookTry = 0;
+  if (Cloud.on && !s.wild){ try { pickFish(s, c); } catch(e){} const id = F.castId = (F.castId || 0) + 1; F.roll = 'pending';   /* v1009 連線時也算一次（只拿機率，卡片寫「大約每幾條才 1 條」）；魚還是伺服器決定 */
+    F.rollErr = ''; F.hookTry = 0;
     const args = { p_spot: s.id, p_charge: +c.toFixed(3), p_x: +me.pos.x.toFixed(2), p_z: +me.pos.z.toFixed(2), p_rig: Rig.rig, p_line: Rig.line, p_bait: bt ? bt.id : null, p_chum: F.chumB ? F.chumB.src : null, p_boat: !!myBoat, p_bx: +to.x.toFixed(2), p_bz: +to.z.toFixed(2), p_sl: F.castSlot || signSlot() };
     F.rollArgs = args; F.rollC = c;
     const roll = n => cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return;
@@ -7889,7 +7890,8 @@ function pickFish(spot, charge){
   const mudK = f => spot.id !== 'mudflat' ? 1 : ((Rig.rig === 'bottom') === BOTTOM_FISH.has(f.id) ? 1 : 0);   /* 泥灘：抓招潮蟹就是蟹、抓彈塗魚就是魚 */
   const wildK = f => breedSeason() && WILD_BREED.has(f.id) ? 1.5 : 1;   /* 野外繁殖季 */
   const bk = curBait() && curBait().k, bFav = Rig.rig === 'lure' ? null : curBait(), w = list.map(f => (f.w || 1) * tideFishK(f, spot.id) * condFishK(f) * baitFavK(bFav, f) * (bk && sigClass(f) === bk ? 1.5 : 1) * (F.sig === 'shadow' && f.id === 'cobia' ? 3 / 1.3 : 1) * (F.sig && (sigClass(f) === F.sig || (F.sig === 'shadow' && (f.max || 0) >= 3)) ? (f.rarity === '傳說' ? (bk === F.sig ? 1.5 : 1.3) : (bk === F.sig ? 4 : 2.5)) : 1) * rw(f) * mudK(f) * wildK(f) * (intel && intel.includes(f.id) ? 2.5 : 1) * (corK && CORAL_FISH.has(f.id) ? 1 + 0.25 * corK : 1) * (tip.spot === spot.id && tip.fish === f.id ? 2.5 : 1) * (rainy && RAIN_FISH.has(f.id) ? 2 : 1) * (SEASON_FISH.has(f.id) && f.rarity !== '傳說' ? 2 : 1) * (f.time ? (f.time === per ? 1.5 : 0.15) : 1) * (f.rarity === '常見' ? 1 : f.rarity === '稀有' ? 0.34 * (1 + charge*0.8) * kr * krFit * ring : 0.07 * (1 + charge*1.6) * (spot.legendBoost || 1) * kl * ring * legK));
-  const wsum = w.reduce((a,b) => a+b, 0); let r = Math.random() * wsum;
+  if (F.habK) for (let i = 0; i < list.length; i++) if (habFishIn(F.habK, list[i])) w[i] *= list[i].rarity === '傳說' ? 1.5 : 3;   /* v1009 水裡的地形（伺服器 266 一樣） */
+  const wsum = w.reduce((a,b) => a+b, 0); pickFish.W = { ids: list.map(f => f.id), w: w.slice(), sum: wsum }; let r = Math.random() * wsum;
   for (let i = 0; i < list.length; i++){ r -= w[i]; if (r <= 0){ pickFish.last = { id: list[i].id, p: wsum > 0 ? w[i] / wsum : 1 }; return list[i]; } }   /* v1006 記下這條的機率，卡片上寫「大約每幾條才 1 條」 */
   return list[0];
 }
@@ -8457,6 +8459,34 @@ function scopeBook(){ const seen = scopeSeen(), n = SIGHT.filter(s => seen[s[0]]
   const ul = el('ul', ''); for (const [id, ic, nm, when] of SIGHT){ const li = el('li', seen[id] ? 'on' : ''); li.appendChild(el('span', 'ic', seen[id] ? ic : '❔')); const d = el('div', ''); d.appendChild(el('b', '', seen[id] ? nm : '？？？')); d.appendChild(el('small', '', seen[id] ? `看過 ${seen[id]} 次` : `提示：${when}`)); li.appendChild(d); ul.appendChild(li); }
   P.appendChild(ul); P.appendChild(el('p', 'sub', n >= SIGHT.length ? '🔭 集滿了！天空名牌已經可以用' : '全部看過一次，拿「🔭 天空名牌」')); const x = el('button', 'tbtn', '關掉'); x.addEventListener('click', e => { e.stopPropagation(); P.remove(); }); P.appendChild(x); (Scope.el || document.body).appendChild(P); }
 addEventListener('resize', () => { try { if (Scope.el) scopeMask(Scope.el.querySelector('canvas')); } catch(e){} });
+/* ===== v1009 水裡的地形（作者 11/28：「還不如靠玩家經驗，有草的地方比較有鱉之類的」）=====
+   海面上的徵兆（海鳥、漣漪、魚影、氣泡）不畫了。新主島水裡放了真的水草叢、礁石；棧橋的柱子底下、河流進海的河口也算。
+   浮標落在這些地方旁邊，愛待在那裡的魚比較多（一般 ×3、傳說 ×1.5，伺服器 265／266 一樣算）。畫面上不寫哪裡有什麼魚，要自己釣出經驗：
+   同一種魚在同一種地方釣到 3 次，圖鑑那條魚就會寫「常在：水草邊」。卡片只寫「在哪裡釣到的」。
+   HAB_Z：[x, z, 半徑, 種類]（新主島世界座標，跟 265 的表一樣，兩邊要一起改）。 */
+const HAB_Z = [[26,1574,3.5,"pile"],[-130,1476,3.5,"pile"],[6,1594,3.5,"pile"],[-140,1472,3.5,"pile"],[-32,1572,3.5,"pile"],[38,1586,3.5,"pile"],[8,1576,3.5,"pile"],[-122,1476,3.5,"pile"],[-10,1574,3.5,"pile"],[-16,1578,3.5,"pile"],[36,1574,3.5,"pile"],[-30,1584,3.5,"pile"],[42,1570,3.5,"pile"],[-110,1476,3.5,"pile"],[22,1590,3.5,"pile"],[-26,1576,3.5,"pile"],[-14,1592,3.5,"pile"],[-158,1470,3.5,"pile"],[-116,1480,3.5,"pile"],[20,1578,3.5,"pile"],[-100,1466,7,"mouth"],[-18,1442,4,"weed"],[-28,1444,4,"weed"],[-22,1452,4,"weed"],[-66,1460,4,"weed"],[-82,1460,4,"weed"],[-44,1456,4,"weed"],[-38,1448,4,"weed"],[-110,1466,4,"weed"],[-124,1464,4,"weed"],[-38,1438,4,"weed"],[-54,1578,3.5,"rock"],[-66,1424,3.5,"rock"],[106,1564,3.5,"rock"],[126,1462,3.5,"rock"],[-108,1456,3.5,"rock"],[8,1436,3.5,"rock"],[-148,1478,3.5,"rock"],[136,1514,3.5,"rock"],[44,1580,3.5,"rock"],[-8,1586,3.5,"rock"],[-74,1460,3.5,"rock"],[-92,1464,3.5,"rock"],[-58,1460,3.5,"rock"]];
+const HAB_FISH = {"weed":["softshell","bass","goldfish","carp","crucian","snakehead","tilapia","pseudorasbora","medaka","guppy","shrimp","mosquitofish","climbperch","loach","koi"],"rock":["scorpion","grouper","groupie","octopus","crab","puffer","kingcrab","acro","zacco","creekcrab","goby","kuhua","hillstream","ayu","trout","catfish","eel","tilefish"],"pile":["grunt","filefish","roundscad","horsemack","threadfin","moonbream","blackbream","terapon","scat","squid","cuttle","ika","mangsnapper"],"mouth":["perch","eel","alligatorgar","mullet","milkfish","barramundi","flounder","stingray","tarpon","whiting","yellowcheek"]};
+const HAB_TXT = { weed: ['🌿', '水草邊'], rock: ['🪨', '礁石邊'], pile: ['🪵', '棧橋柱子底下'], mouth: ['🏞️', '河口'] };
+function habAt(x, z){ if (x == null || z == null) return null; let best = null, bd = 1e9; for (const q of HAB_Z){ const d = (x - q[0]) * (x - q[0]) + (z - q[1]) * (z - q[1]); if (d <= q[2] * q[2] && d < bd){ bd = d; best = q[3]; } } return best; }
+function habFishIn(k, f){ const L = HAB_FISH[k]; return !!(L && f && L.includes(f.of || f.id)); }
+function habExp(){ return LS.get('tide.habExp', {}) || {}; }
+function habLearn(f, k){ if (!k || !f) return; const E = habExp(), id = f.of || f.id; E[id] = E[id] || {}; E[id][k] = (E[id][k] || 0) + 1; LS.set('tide.habExp', E); return habFishIn(k, f) && E[id][k] === 3; }
+function habKnown(f){ const E = habExp()[f.of || f.id] || {}; return Object.keys(HAB_TXT).filter(k => (E[k] || 0) >= 3 && habFishIn(k, f)); }
+const Hab = { built: false, weeds: [] };
+function habBuild(){ Hab.built = true; if (!W2) return; const g = new THREE.Group(); g.name = 'habitat'; let seed = 7; const R = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const WL = WATER_LEVEL, bladeM = new THREE.MeshLambertMaterial({ color: '#4f8f3a', side: THREE.DoubleSide }), bladeM2 = new THREE.MeshLambertMaterial({ color: '#6fae4a', side: THREE.DoubleSide }), padM = new THREE.MeshLambertMaterial({ color: '#5a9a3e' }), rockM = new THREE.MeshLambertMaterial({ color: '#7d7a72', flatShading: true }), rockM2 = new THREE.MeshLambertMaterial({ color: '#93897a', flatShading: true });
+  const bottom = (x, z) => { try { return Math.max(W2.tinfo(x, z).h, WL - 1.6); } catch(e){ return WL - 1; } };
+  for (const [cx, cz, r, k] of HAB_Z){
+    if (k === 'weed'){ for (let i = 0; i < 9; i++){ const a = R() * 6.283, d = Math.sqrt(R()) * r * 0.85, x = cx + Math.sin(a) * d, z = cz + Math.cos(a) * d; if (!W2.water(x, z)) continue;
+        const b = bottom(x, z), cl = new THREE.Group(); cl.position.set(x, b, z); const n = 5 + Math.floor(R() * 5);
+        for (let j = 0; j < n; j++){ const h = (WL - b) + 0.2 + R() * 0.45, bl = new THREE.Mesh(new THREE.PlaneGeometry(0.11 + R() * 0.08, h, 1, 3), j % 2 ? bladeM : bladeM2); bl.geometry.translate(0, h / 2, 0); bl.position.set((R() - 0.5) * 0.35, 0, (R() - 0.5) * 0.35); bl.rotation.y = R() * 3.14; bl.rotation.z = (R() - 0.5) * 0.25; cl.add(bl); }
+        cl.userData.ph = R() * 6; g.add(cl); Hab.weeds.push(cl); }
+      if (R() < 0.7) for (let i = 0; i < 4; i++){ const a = R() * 6.283, d = R() * r * 0.8, x = cx + Math.sin(a) * d, z = cz + Math.cos(a) * d; if (!W2.water(x, z)) continue; const pd = new THREE.Mesh(new THREE.CylinderGeometry(0.28 + R() * 0.18, 0.28, 0.02, 12, 1, false, 0.3, 5.9), padM); pd.position.set(x, WL + 0.01, z); pd.rotation.y = R() * 6.28; g.add(pd); } }
+    else if (k === 'rock'){ for (let i = 0; i < 5; i++){ const a = R() * 6.283, d = Math.sqrt(R()) * r * 0.7, x = cx + Math.sin(a) * d, z = cz + Math.cos(a) * d; if (!W2.water(x, z)) continue;
+        const b = bottom(x, z), s0 = 0.4 + R() * 0.7, top = WL + (i < 2 ? 0.15 + R() * 0.45 : -0.35 + R() * 0.3), m = new THREE.Mesh(new THREE.DodecahedronGeometry(s0, 0), i % 2 ? rockM : rockM2); m.scale.set(1 + R() * 0.5, Math.max(0.4, (top - b) / (s0 * 1.6)), 1 + R() * 0.4); m.position.set(x, b + (top - b) * 0.5, z); m.rotation.set(R(), R() * 6, R()); g.add(m); } } }
+  scene.add(g); Hab.g = g; }
+function habTick(dt, t){ if (!Hab.built){ if (W2 && W2S.on) habBuild(); return; } if (!Hab.g) return; Hab.g.visible = !!(W2S.on && W2 && W2.near(me.pos.x, me.pos.z)); if (!Hab.g.visible || frameNo % 2) return;
+  for (const c of Hab.weeds){ if (Math.abs(c.position.x - camera.position.x) > 50 || Math.abs(c.position.z - camera.position.z) > 50) continue; const k = Math.sin(t * 1.3 + c.userData.ph); for (let i = 0; i < c.children.length; i++) c.children[i].rotation.x = k * 0.12 + Math.sin(t * 2 + i) * 0.04; } }
 const jumpers = [];
 /* ===== v1006 釣到魚那一刻（研究清單第 1 項）=====
    稀有、傳說的魚拉出水：畫面慢動作一下、鏡頭往人和魚推近，落地的地方冒出一圈稀有度顏色的光（稀有藍、傳說金），稀有魚還有一道藍色光柱，配一串亮亮的音。
@@ -15270,7 +15300,7 @@ function craftPicked(key, n, r, saury){ if (!n) return []; const pool = craftPoo
 function craftItems(cat){ const own = new Set(rec.owned || []), L = [];
   const baitDone = (nm) => r => { if (!(r && r.player)) return false; adoptRow(r.player); SFX.catch(); flash(`做好 4 個${nm}了。到「包包」的魚餌換上`, 2); try { renderTab(); } catch(e){} return true; };
   if (cat === 'bait'){
-    L.push({ key: 'live', ico: '🪱', name: '活餌', tags: ['做一次 4 個', `現在有 ${bagN('live')} 個`], desc: '「掠食魚看到活的就追，往有海鳥的地方丟最好。」跟秋刀魚切塊加起來一天最多做 8 次。', R: RECIPE.live, fn: 'craft_bait', id: 'live', done: baitDone('活餌') });
+    L.push({ key: 'live', ico: '🪱', name: '活餌', tags: ['做一次 4 個', `現在有 ${bagN('live')} 個`], desc: '「掠食魚看到活的就追。」跟秋刀魚切塊加起來一天最多做 8 次。', R: RECIPE.live, fn: 'craft_bait', id: 'live', done: baitDone('活餌') });
     L.push({ key: 'saurychunk', ico: '🔪', name: '秋刀魚切塊', tags: ['做一次 4 個', `現在有 ${bagN('saurychunk')} 個`], desc: '「鯊魚、鮪魚、浪人鰺聞到這個味道就來了。」', R: { c: 20, n: 1, r: '常見', saury: true, m: {} }, fn: 'craft_bait', id: 'saurychunk', done: baitDone('秋刀魚切塊') }); }
   else if (cat === 'gear'){
     for (const g of GEAR2){ const have = [1, 2, 3].map(q => bagN(g.key + q)), eq = eqGear(g.eq);
@@ -15905,7 +15935,7 @@ async function petHomeSync(){ if (!onIsle){ if (Pets.home.length){ Pets.home.for
     const i = free++, x = ISLE.x + 3 + (i % 3) * 1.5, z = ISLE.z + 4 + Math.floor(i / 3) * 1.2; pt.pos.set(x, groundHeight(x, z), z); pt.wander = { x, z, at: 0 }; return pt; }); }
 function penSpot(it){ const A = PEN_AREA[it.t], u = (Math.random() * 2 - 1) * A.hx, v = (Math.random() * 2 - 1) * A.hz, c = Math.cos(it.r), s = Math.sin(it.r);
   return { x: ISLE.x + it.x + u * c + v * s, z: ISLE.z + it.z - u * s + v * c, y: ISLE.y + A.y }; }
-function updatePets(dt, t){ try { if (Pillars.length) pillarTick(dt); } catch(e){} try { if (RarFx.length) rarFxTick(dt); } catch(e){ RarFx.length = 0; } try { if (Scope.on) scopeTick(dt); } catch(e){ if (!scopeTick.w){ scopeTick.w = 1; console.warn('scope', e); } } try { if (Slap.list.length) slapTick(dt); } catch(e){ console.warn('slap', e); Slap.list.length = 0; } try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
+function updatePets(dt, t){ try { if (Pillars.length) pillarTick(dt); } catch(e){} try { if (RarFx.length) rarFxTick(dt); } catch(e){ RarFx.length = 0; } try { habTick(dt, t); } catch(e){ if (!habTick.w){ habTick.w = 1; console.warn('hab', e); } } try { if (Scope.on) scopeTick(dt); } catch(e){ if (!scopeTick.w){ scopeTick.w = 1; console.warn('scope', e); } } try { if (Slap.list.length) slapTick(dt); } catch(e){ console.warn('slap', e); Slap.list.length = 0; } try { shopHallTick(dt, t); } catch(e){ if (!shopHallTick.w){ shopHallTick.w = 1; console.warn('shophall', e); } }
   updatePetFor(me, petMine(), dt, t);
   for (const p of peers.values()) if (p.fisher) updatePetFor(p.fisher, p.fisher.petWant, dt, t);
   if (frameNo % 30 === 0) petHomeSync();
@@ -18675,7 +18705,7 @@ function rodSp(r, spotId){ const sp = r && r.sp; if (!sp) return [1, 1]; let a =
 function rodFit(spotId, r){ const T = ROD_TYPES[rodType(r || curRod())]; if (!T.fit || !spotId || spotId === 'shrimp' || spotId === 'mudflat') return null; return T.fit.includes(spotId) ? 'good' : 'bad'; }
 const BAITS = [
   { id:'worm', name:'蚯蚓',   price:20,  pack:10, desc:'最便宜的魚餌，稀有魚機率 ×1.25。蟲餌：🫧底棲魚特別愛（底棲魚 ×1.5，落在氣泡旁邊加成更大）。', rare:1.25, legend:1, k:'bottom' },
-  { id:'live', name:'活餌', price:0, pack:4, craft:true, desc:'阿鐵師傅用小魚做的活餌（商店不賣）。🐦掠食魚特別愛：掠食魚 ×1.5，落在海鳥旁邊加成更大、範圍更寬。', rare:1.15, legend:1.1, k:'pred' },
+  { id:'live', name:'活餌', price:0, pack:4, craft:true, desc:'阿鐵師傅用小魚做的活餌（商店不賣）。🐦掠食魚特別愛：掠食魚 ×1.5。', rare:1.15, legend:1.1, k:'pred' },
   { id:'glow', name:'亮光餌', price:60,  pack:5, desc:'會發光的小蝦，稀有魚機率 ×1.8。', rare:1.8, legend:1.1 },
   { id:'squidbait', name:'小卷切片', price:150, pack:5, desc:'大魚最愛的味道，稀有 ×1.4、傳說 ×1.4。', rare:1.4, legend:1.4 },
   { id:'gold', name:'黃金餌', price:300, pack:3, desc:'傳說中的金色魚餌，傳說魚機率 ×1.8。', rare:1.3, legend:1.8 },
@@ -20640,7 +20670,8 @@ function showCatch(f, w, res){
   if (f.rs && F.rsTag){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `🦈 ${rsLabel(F.rsTag)}・身上 ${rsInfo(F.rsTag).scars} 道叉叉・整片海只有一小群`; b.appendChild(x); }
   if (f.of){ const x = document.createElement('span'); x.className = 'badge var'; x.textContent = `✨ 罕見變種（${FISH_BY_ID[f.of].name}）`; b.appendChild(x); if (res.isNew){ SFX.catch(); flash(`發現新的變種：${f.name}`, 2.4); } }
   if (res.isNew){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = '第一次釣到'; b.appendChild(x); }
-  { const L = pickFish.last; if (L && L.id === f.id && f.rarity !== '常見' && L.p > 0 && L.p < 0.25){ const n = Math.round(1 / L.p), x = document.createElement('span'); x.className = 'badge odds r-' + f.rarity; x.textContent = `🎲 這裡大約每 ${n >= 1000 ? (Math.round(n / 100) * 100).toLocaleString() : n} 條才 1 條`; b.appendChild(x); } pickFish.last = null; }
+  { const W = pickFish.W, ix = W ? W.ids.indexOf(f.id) : -1, L = ix >= 0 && W.sum > 0 ? { p: W.w[ix] / W.sum } : null; if (L && f.rarity !== '常見' && L.p > 0 && L.p < 0.25){ const n = Math.round(1 / L.p), x = document.createElement('span'); x.className = 'badge odds r-' + f.rarity; x.textContent = `🎲 這裡大約每 ${n >= 1000 ? (Math.round(n / 100) * 100).toLocaleString() : n} 條才 1 條`; b.appendChild(x); } pickFish.W = null; }
+  if (F.habK && HAB_TXT[F.habK]){ const H = HAB_TXT[F.habK], x = document.createElement('span'); x.className = 'badge'; x.textContent = `${H[0]} 在${H[1]}釣到的`; b.appendChild(x); if (habLearn(f, F.habK)) setTimeout(() => flash(`📖 圖鑑記下來了：${f.name}常在${H[1]}`, 2.4), 900); }
   /* v831 做深：釣到魚就知道自己站在哪裡——破紀錄大聲說出來（比上次大多少）；沒破就告訴你紀錄是多少、差多少；還會跟朋友比 */
   if (res.isBest){ const x = document.createElement('span'); x.className = 'badge new'; x.textContent = `🏆 破紀錄 +${fmtKg(w - (res.prev || 0))}`; b.appendChild(x); }
   else if (!res.isNew && res.prev > 0){ const x = document.createElement('span'); x.className = 'badge'; const gap = res.prev - w; x.textContent = gap <= res.prev * 0.12 ? `差 ${fmtKg(gap)} 破紀錄` : `你的紀錄 ${fmtKg(res.prev)}`; b.appendChild(x); }
@@ -22945,6 +22976,7 @@ const NPC_TIPS = [
   '我的海裡同一種魚一公一母，每天有機會生小魚',
   '在高高的岸上釣大魚要有撈網，釣具店「🧰工具」那裡有賣',
   '窩料丟下去，附近的魚會聚過來',
+  '聽說鱉喜歡躲在水草裡', '棧橋柱子底下常常有魚在躲太陽', '河流進海的那個口，魚特別多', '礁石縫裡住了不少東西，石狗公、章魚都愛躲在那',
   '去港口找船夫阿海，可以出海或去潛水',
   '去過的地方，打開地圖就能直接傳送過去',
   '釣蝦場要先跟老闆買時段才能釣',
@@ -23851,6 +23883,7 @@ function renderTab0(){
           pb.innerHTML = `<span class="pbar"><i style="width:${Math.round(Math.max(0, Math.min(130, pp)) / 1.3)}%"></i></span>🧬 ${pp}%${pv && pv[1] ? '・✨已演化' : ''}`; pb.title = '整個伺服器共用的族群量：大家釣太多會變少、放流會變多；連續 3 天 115% 以上會演化出新花色'; it.appendChild(pb); }
         if (f.fest) it.appendChild(el('div', 'meta fest', (FEST_FISH_WHEN[f.fest] || '🏮 節慶限定') + (festOn(f.fest) ? '・現在釣得到！' : '・現在釣不到')));   /* v388 節慶魚標清楚哪時候才有 */
         if (known){ const fk = fightStyleK(f), n5 = (rec.count[f.id] || 0) >= 5, sg = fightSig(f), ex = fightExtra(f);   /* v636 圖鑑教你：第一次釣到寫打法；釣到 5 條寫招牌動作和推薦的竿 */
+          { const hk = habKnown(f); if (hk.length) it.appendChild(el('div', 'meta', `📍 常在：${hk.map(k => HAB_TXT[k][0] + HAB_TXT[k][1]).join('、')}`)); }   /* v1009 自己釣出來的經驗 */
           it.appendChild(el('div', 'meta', `⚔️ 打法：${FIGHT_NAME[fk]}${ex ? (ex === 'shake' ? '・會甩頭' : '・會扭動') : ''}`));
           it.appendChild(el('div', 'meta', n5 ? `${sg ? `★ 招牌：${FIGHT_SIG_TXT[sg.join(',')] || FIGHT_SIG_TXT[sg[0]] || ''}・` : ''}🎣 推薦：${fightRodRec(f)}` : `🎣 推薦的竿：釣到 5 條解鎖（${Math.min(5, rec.count[f.id] || 0)}/5）`)); }
         if (known && baitsFor(f).length) it.appendChild(el('div', 'meta', starsOf(f) >= 2 ? '🍽️ 喜歡：' + baitsFor(f).map(b => b.name).join('、') : '🍽️ 喜歡的餌：★★ 解鎖'));   /* v295 先自己試，釣到 10 條（兩顆星）才告訴你 */
@@ -24101,7 +24134,7 @@ function renderTab0(){
       body.appendChild(inp); body.appendChild(none); }
     /* v756 作者：「遊戲全面不要有ai味，介紹也是」→ 說明頁整個重寫：每段最多十來條、一條一兩句，只講怎麼做；價錢、機率、每天上限收在「想算數字的人再看」。描述畫面的拿掉、放錯段的搬回去（撞球、環保袋、造型原本都塞在「釣魚」裡） */
     const HELP2 = [
-      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "先看水面再拋：漣漪是小魚，黑影是大魚，海鳥盤旋是掠食魚，冒泡是底棲魚。拋在旁邊，砸在上面會嚇跑。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。", "魚拉上來會先掉在腳邊亂跳，頭上寫著是什麼魚、多重，跳完才撿起來。不想等就點一下畫面。"],
+      ["釣魚", "fish", ["走到水邊，按住「拋竿」，放開。拋得越遠，稀有的魚越多。", "浮標點幾下是魚在試探，先別按。整個沉下去、跳出「!」再按，人物會用力揚竿把魚鉤住。", "拉魚時按住收線，張力條變紅就放開。線鬆太久魚會脫鉤。", "魚往外衝的時候，捲線器會「滋滋」叫、人會被往前扯，這時候放開，等牠跑完。往左竄，搖桿往右拉。跳出水面，放開。", "畫面中間跳出黃字是魚要出招了，變紅就照上面寫的做。做對了魚會累很快。", "地上發光的圈是好釣點。", "看水裡的地形再拋：水草叢、礁石、棧橋的柱子底下、河口，各有愛待在那裡的魚。哪種魚在哪裡，要自己釣出經驗；同一種魚在同一種地方釣到 3 次，圖鑑會記下來。", "清晨、黃昏、下雨天比較好釣。海邊要看潮汐，點右上角天氣那格有潮汐表。", "有些魚很挑（潮位、天氣、白天晚上、吃什麼餌），圖鑑裡每一種都有寫。", "沒釣過的魚只看得到黑影，拉上來才知道是什麼。", "魚拉上來會先掉在腳邊亂跳，頭上寫著是什麼魚、多重，跳完才撿起來。不想等就點一下畫面。"],
         ["傳說魚：竹釣竿在港口外海每竿約 0.2%～0.5%，其他地方 0.1%～0.2%。滿力拋比輕輕拋高一倍以上。好竿、魚餌、窩料、料理都會加。", "保底：連 150 條沒中傳說魚，之後每竿多一點機會（250 條時加 0.4%、400 條加 1%、最高加 3%），中了重算。釣蝦場不算。", "等咬大約 5～12 秒。小魚拉 6～10 秒，中型 15～25 秒，大魚 30～50 秒，傳說魚 1～2 分鐘。", "線鬆超過 3 秒左右會脫鉤。魚衝完、跳完的 1.6 秒內放著沒關係。", "水面的徵兆每 45 秒換一批。", "釣具店老闆每天報一種魚，那種魚當天在那個釣點多 2.5 倍。", "圖鑑每種魚三顆星：第一次釣到一顆；釣 10 條或釣到前 20% 大的兩顆；完美搏鬥一次加上前 5% 大的三顆。"]],
       ["釣竿、魚餌、裝備", "fish", ["釣具店賣六支竿：竹竿（免費）、路亞軟竿、手竿、遠投竿、磯釣硬竿、黃金王者竿。", "竿子要用對地方：手竿在河、湖、溪；遠投竿在海邊；磯釣竿在港口外海和小島碼頭；路亞竿釣掠食魚。", "路亞、手竿、遠投、磯釣四支可以在背包的「釣組」升級，最高 5 級，要金幣和魚缸裡的魚。", "釣法在釣具店換，不用錢：浮標什麼都釣，路亞釣掠食魚，沉底釣底棲魚。", "細線咬得快但容易斷，粗線相反。", "魚餌挑魚：玉米粒釣鯉魚鯽魚，蝦仁釣鯛，蚯蚓釣底棲魚，活餌釣掠食魚。換上以後右上角會寫這裡哪些魚愛吃。", "阿鐵在釣具店旁邊，帶魚、金幣和材料去找他，可以做活餌、鉤子、浮標、路亞、修竿包、竿子造型、釣線顏色。第一次去他會送你一包入門材料。", "材料有六種：貝殼、舊漁網、漂流木、珊瑚碎片、魚鱗、粉紅貝。海邊撿垃圾、潛水撿垃圾時有機會多撿到；魚鱗在阿鐵的工坊用魚換（點上面的「💠 用魚換魚鱗」，自己挑要換哪幾條）。", "要用到魚的東西，格子是橘色虛線的：一開始先放你最輕的魚，點格子可以換成別條。收藏⭐、展示中的魚不會出現在裡面。", "普通浮標、普通假餌本來就在背包裡，免費、不會弄丟。阿鐵做的貝殼浮標（浮標釣）、魚鱗路亞（路亞釣法）讓魚咬得快一點，拉斷線會弄丟；品質有普通、精良、極品。到「包包 → 🎣 釣組」換。", "釣竿有耐久度，釣到越大的魚掉越多；掉到 0 拉魚時拉力上升比較快。修竿包一個補 40，可以用材料做，或直接付 🪙300 跟阿鐵買。", "材料、浮標、路亞、修竿包、阿鐵做的造型，可以到魚市場「🤝 釣客擺攤 → 🧺 材料・裝備」賣給別人，自己訂價，賣出收 5%。集章卡、排位送的造型不能賣。", "站得比水面高很多的地方釣到大魚要用撈網，釣具店「工具」有賣，買了會自己用。", "摺疊椅、釣台、竿架、遮陽傘也在「工具」。到水邊從背包「釣組」按「擺出來」，坐著就能釣。", "以前買的舊竿照樣能用，也可以在「釣組」免費換成現在的竿。"],
         ["價錢：路亞軟竿 800、手竿 500、遠投竿 800、磯釣硬竿 800、黃金王者竿 12,000。王者竿到哪裡稀有和傳說都是 1.3 倍。", "升級：2 級 800 金幣加常見魚 3 條；3 級 2,000 加稀有魚 2 條；4 級 4,500 加稀有魚 4 條；5 級 9,000 加傳說魚 1 條。用的是魚缸裡最輕的，收藏和我的海裡的不會動。5 級稀有 1.5 倍、傳說 1.4 倍。", "對上愛吃的餌，那種魚多 1.8 倍。沙蠶在退潮的沙灘挖，小螃蟹在珊瑚礁島的礁岩撿，各一天 6 次。", "鉤子：倒刺鉤線鬆比較不會脫鉤；圓形鉤每條魚原諒一次失誤；鍛造重鉤硬拉時張力升得慢；金鉤做對時魚多掉體力。阿鐵一天最多做 10 件。", "保養釣竿 200 金幣，接下來 30 竿收線快 10%、線比較不容易斷。", "摺疊椅 600、小釣台 1,500、竿架加魚護 900、遮陽傘加釣箱 800。後三樣要先有摺疊椅。有釣台可以多拋 3 公尺左右。", "竿架：等魚時按「跳」站起來，竿子插著，魚咬了鈴鐺會響，25 秒內回去坐下就能拉。", "撈網：站在高處釣到 1.5 公斤以上才需要。", "每支竿子會記得釣過幾條。100 條叫「順手」，500 條叫「老夥伴」，2,000 條叫「傳家寶」，只是紀念。"]],
@@ -24137,7 +24170,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["望遠鏡：釣具店「🧰工具」🪙1,200。買了之後打開手機點「🔭 望遠鏡」，或背包「🎣 釣組」→「拿出望遠鏡」。手指拖曳看四周，＋ 拉近。遠方偶爾會出現海豚、鯨魚、流星、燈籠船這些稀奇的東西，對準看一下就記進「📖 望遠鏡筆記」，不同時間和天氣看到的不一樣。十一種集滿拿「🔭 天空名牌」。", "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["水裡的地形：新主島的水裡有水草叢、礁石，還有棧橋的柱子底下、河流進海的河口。每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚就比較多。哪種魚在哪裡不會告訴你，要自己釣出經驗：同一種魚在同一種地方釣到 3 次，圖鑑那條魚會寫「常在：水草邊」。海面上以前的海鳥、漣漪、魚影、氣泡拿掉了。", "望遠鏡：釣具店「🧰工具」🪙1,200。買了之後打開手機點「🔭 望遠鏡」，或背包「🎣 釣組」→「拿出望遠鏡」。手指拖曳看四周，＋ 拉近。遠方偶爾會出現海豚、鯨魚、流星、燈籠船這些稀奇的東西，對準看一下就記進「📖 望遠鏡筆記」，不同時間和天氣看到的不一樣。十一種集滿拿「🔭 天空名牌」。", "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25583,6 +25616,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1009', d:'11/28', items:[['🌿','新主島的水裡多了水草叢和礁石；連同棧橋的柱子底下、河口，每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚比較多'], ['📖','哪種魚在哪裡要自己釣出經驗：卡片會寫「在水草邊釣到的」，同一種魚在同一種地方釣到 3 次，圖鑑就記下「常在：水草邊」'], ['🌊','海面上的海鳥、漣漪、魚影、氣泡徵兆拿掉了'], ['🎲','連線的時候，稀有魚的卡片也會寫「這裡大約每幾條才 1 條」']] },
   { id:'u1008', d:'11/28', items:[['🔭','釣具店「🧰工具」有賣望遠鏡（🪙1,200），買了走到哪都能從手機或背包拿出來看，拖曳轉方向、拉近'], ['📖','遠方會出現稀奇的東西：海豚跳水、鯨魚噴水、海鳥排隊回家、漁船亮燈、流星、霧裡的燈籠船…不同時間和天氣不一樣，看到就記進望遠鏡筆記'], ['🌟','十一種都看過拿「🔭 天空名牌」；偶爾會被海鷗嚇一跳']] },
   { id:'u1007', d:'11/28', items:[['🐟','釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光，稀有是藍色還有一道光柱，傳說是金色'], ['🎲','卡片上多一行「這裡大約每幾條才 1 條」，看得出這條有多難得'], ['💎','拿著魚的時候頭上會寫「💎 稀有」「🌟 傳說」，旁邊的人一看就知道']] },
   { id:'u1006', d:'11/28', items:[['🚕','潮搭Go 的車子照原本的上白下藍，車身上的黑點點不見了'], ['👕','名片的「穿搭」頁改成拍新人物、列新人物身上的衣服（以前是舊人物的海龜帽、披風）'], ['🔧','阿鐵搬進新主島的釣具店裡，在右前角自己的工作台'], ['🎣','釣具店裡塞滿東西：左牆一整排竿袋、後牆洞洞板掛滿小包裝、中間一座兩面掛滿的鐵網架'], ['🪑','從椅子站起來、跳起來會站在椅子前面；在長椅旁邊點圖示直接坐回去'], ['🏟️','體育場看台中間有樓梯，直接走上去；每一階座位都可以站'], ['⚽','足球門換成用細線拉的真網子，後面、上面、左右都有，會輕輕晃'], ['🛣️','往娛樂館那條路接大道的地方柏油連成一整塊，不會凸出黑色三角形'], ['🏛️','村公所往後退，台階和盆栽不會壓到路上'], ['🚪','體育場西邊的牆上開了一個藍框拱門，上面寫「潮汐體育場」']] },

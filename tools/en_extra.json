@@ -9951,5 +9951,20 @@
  "傍晚 4 點半到 7 點半": "Evening, 4:30–7:30",
  "下雨天、多雲、颱風過後的白天": "Daytime when rainy, cloudy, or after a typhoon",
  "不下雨的晚上": "Nights without rain",
- "起霧的時候，或半夜": "When foggy, or late at night"
+ "起霧的時候，或半夜": "When foggy, or late at night",
+ "水裡的地形：新主島的水裡有水草叢、礁石，還有棧橋的柱子底下、河流進海的河口。每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚就比較多。哪種魚在哪裡不會告訴你，要自己釣出經驗：同一種魚在同一種地方釣到 3 次，圖鑑那條魚會寫「常在：水草邊」。海面上以前的海鳥、漣漪、魚影、氣泡拿掉了。": "Underwater spots: the new island's waters have weed beds and rocks, plus the pier pilings and the river mouth. Each place has fish that love it — cast nearby and you'll get more of them. Nobody tells you which fish live where; learn it yourself. Catch the same fish in the same kind of place 3 times and its Fishdex entry notes \"Often near: weeds\". The old seabird, ripple, shadow and bubble signs on the surface are gone.",
+ "看水裡的地形再拋：水草叢、礁石、棧橋的柱子底下、河口，各有愛待在那裡的魚。哪種魚在哪裡，要自己釣出經驗；同一種魚在同一種地方釣到 3 次，圖鑑會記下來。": "Read the underwater terrain before casting: weed beds, rocks, pier pilings and the river mouth each have fish that love them. Learn which fish live where by fishing; catch the same fish in the same kind of place 3 times and the Fishdex records it.",
+ "新主島的水裡多了水草叢和礁石；連同棧橋的柱子底下、河口，每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚比較多": "The new island's waters now have weed beds and rocks; together with pier pilings and the river mouth, each place has fish that love it — cast nearby for more of them",
+ "哪種魚在哪裡要自己釣出經驗：卡片會寫「在水草邊釣到的」，同一種魚在同一種地方釣到 3 次，圖鑑就記下「常在：水草邊」": "Learn where fish live by experience: the card says \"Caught near weeds\", and after 3 catches of the same fish in the same kind of place the Fishdex notes \"Often near: weeds\"",
+ "海面上的海鳥、漣漪、魚影、氣泡徵兆拿掉了": "The seabird, ripple, shadow and bubble signs on the water surface are gone",
+ "連線的時候，稀有魚的卡片也會寫「這裡大約每幾條才 1 條」": "When online, rare catch cards also show \"About 1 in N here\"",
+ "聽說鱉喜歡躲在水草裡": "I heard softshell turtles like hiding in the weeds",
+ "棧橋柱子底下常常有魚在躲太陽": "Fish often hide from the sun under the pier pilings",
+ "河流進海的那個口，魚特別多": "Where the river meets the sea, there are lots of fish",
+ "礁石縫裡住了不少東西，石狗公、章魚都愛躲在那": "Lots of things live between the rocks — scorpionfish and octopus love hiding there",
+ "水草邊": "near weeds",
+ "礁石邊": "by the rocks",
+ "棧橋柱子底下": "under the pier",
+ "河口": "the river mouth",
+ "「掠食魚看到活的就追。」": "\"Predators chase anything alive.\""
 }

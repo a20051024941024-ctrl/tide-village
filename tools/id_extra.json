@@ -9675,5 +9675,20 @@
  "傍晚 4 點半到 7 點半": "Sore, 16.30–19.30",
  "下雨天、多雲、颱風過後的白天": "Siang saat hujan, berawan, atau setelah topan",
  "不下雨的晚上": "Malam tanpa hujan",
- "起霧的時候，或半夜": "Saat berkabut, atau tengah malam"
+ "起霧的時候，或半夜": "Saat berkabut, atau tengah malam",
+ "水裡的地形：新主島的水裡有水草叢、礁石，還有棧橋的柱子底下、河流進海的河口。每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚就比較多。哪種魚在哪裡不會告訴你，要自己釣出經驗：同一種魚在同一種地方釣到 3 次，圖鑑那條魚會寫「常在：水草邊」。海面上以前的海鳥、漣漪、魚影、氣泡拿掉了。": "Tempat di bawah air: perairan pulau baru punya rumpun rumput air dan batu karang, juga tiang dermaga dan muara sungai. Setiap tempat punya ikan yang menyukainya — lempar di dekatnya dan ikan itu lebih banyak. Tidak ada yang memberi tahu ikan mana di mana; pelajari sendiri. Tangkap ikan yang sama di jenis tempat yang sama 3 kali dan Fishdex mencatat \"Sering di: rumput air\". Tanda burung laut, riak, bayangan dan gelembung di permukaan sudah dihapus.",
+ "看水裡的地形再拋：水草叢、礁石、棧橋的柱子底下、河口，各有愛待在那裡的魚。哪種魚在哪裡，要自己釣出經驗；同一種魚在同一種地方釣到 3 次，圖鑑會記下來。": "Perhatikan medan bawah air sebelum melempar: rumput air, batu karang, tiang dermaga dan muara sungai masing-masing punya ikan favorit. Pelajari sendiri ikan mana di mana; tangkap ikan yang sama di tempat sejenis 3 kali dan Fishdex mencatatnya.",
+ "新主島的水裡多了水草叢和礁石；連同棧橋的柱子底下、河口，每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚比較多": "Perairan pulau baru kini punya rumput air dan batu karang; bersama tiang dermaga dan muara sungai, tiap tempat punya ikan favorit — lempar di dekatnya untuk lebih banyak",
+ "哪種魚在哪裡要自己釣出經驗：卡片會寫「在水草邊釣到的」，同一種魚在同一種地方釣到 3 次，圖鑑就記下「常在：水草邊」": "Pelajari tempat ikan dari pengalaman: kartu menulis \"Ditangkap di rumput air\", dan setelah 3 kali ikan yang sama di tempat sejenis Fishdex mencatat \"Sering di: rumput air\"",
+ "海面上的海鳥、漣漪、魚影、氣泡徵兆拿掉了": "Tanda burung laut, riak, bayangan dan gelembung di permukaan air sudah dihapus",
+ "連線的時候，稀有魚的卡片也會寫「這裡大約每幾條才 1 條」": "Saat online, kartu ikan langka juga menampilkan \"Sekitar 1 dari N di sini\"",
+ "聽說鱉喜歡躲在水草裡": "Katanya labi-labi suka bersembunyi di rumput air",
+ "棧橋柱子底下常常有魚在躲太陽": "Ikan sering berteduh di bawah tiang dermaga",
+ "河流進海的那個口，魚特別多": "Di muara tempat sungai bertemu laut, ikannya banyak sekali",
+ "礁石縫裡住了不少東西，石狗公、章魚都愛躲在那": "Banyak yang tinggal di celah karang — ikan lepu dan gurita suka bersembunyi di sana",
+ "水草邊": "di rumput air",
+ "礁石邊": "di batu karang",
+ "棧橋柱子底下": "di bawah dermaga",
+ "河口": "muara sungai",
+ "「掠食魚看到活的就追。」": "\"Ikan pemangsa mengejar apa pun yang hidup.\""
 }
