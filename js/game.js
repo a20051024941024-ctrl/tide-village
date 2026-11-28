@@ -12773,6 +12773,7 @@ function renderFriends(body){
     for (const r of Fr.req){ const li = el('li'); li.append(el('span', '', r.name || '釣客')); const a = el('button', 'tbtn vbtn', '加回去'); a.addEventListener('click', () => addFriend(r.id, r.name)); const n = el('button', 'tbtn ghost vbtn', '不要'); n.addEventListener('click', async () => { const d = await frRpc('remove_friend', { p_uid: r.id }); if (d) adoptFriends(d); }); li.append(a, n); ul.appendChild(li); }
     body.appendChild(ul); }
   body.appendChild(el('div', 'dexhead', `⭐ 好友（${Fr.list.filter(f => f.mutual).length}）`));
+  if (!Kid.on){ const row = el('div', 'titles'), on = vcAllowed(), b = el('button', 'tbtn' + (on ? '' : ' ghost'), on ? '📞 好友語音：開' : '📞 好友語音：關'); b.addEventListener('click', () => { LS.set('tide.voice', !on); if (on && VC.st) vcHang(); renderTab(); }); row.appendChild(b); row.appendChild(el('span', 'sub2', '只有互相加好友、都在線上的人能打給你。按著🎤才會送出聲音，不會錄音。')); body.appendChild(row); }
   if (!Fr.list.length) body.appendChild(el('p', 'sub', '還沒有好友。'));
   const on = onlineUids(), ul = el('ul', 'people');
   for (const f of Fr.list.slice().sort((a, b) => (on.has(b.id) - on.has(a.id)) || (b.mutual - a.mutual))){ const li = el('li'), sw = el('span', 'sw'); sw.style.background = on.has(f.id) ? '#3fbf9d' : '#c9d3da';
@@ -12781,7 +12782,8 @@ function renderFriends(body){
     li.append(sw, el('span', '', f.name || '釣客'), el('span', 'st', !f.mutual ? '等對方加你' : on.has(f.id) ? '在村子裡' : seenM == null ? '' : seenM < 60 ? `${Math.max(1, seenM)} 分鐘前上線` : seenM < 1440 ? `${Math.round(seenM / 60)} 小時前上線` : `${Math.round(seenM / 1440)} 天前上線`));
     { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} cardTap(li, f.id, f.name || '釣客', pk); }
     if (f.mutual){ const ch = el('button', 'tbtn vbtn', '💬'); ch.setAttribute('aria-label', '私訊'); const u = DM.unread.find(x => x.from === f.id); if (u) ch.textContent = `💬 ${u.n}`; ch.addEventListener('click', e => { e.stopPropagation(); dmOpen(f.id, f.name); }); li.appendChild(ch);
-      const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g); }
+      const g = el('button', 'tbtn vbtn', '🎁 送禮'); g.addEventListener('click', () => { Fr.giftTo = f; renderTab(); }); li.appendChild(g);
+      { let pk = null; try { for (const [k, p] of peers) if (p.pres && p.pres.u === f.id){ pk = k; break; } } catch(e){} if (pk && !Kid.on){ const vb = el('button', 'tbtn vbtn', '📞'); vb.setAttribute('aria-label', '語音'); vb.addEventListener('click', e => { e.stopPropagation(); closeSheet(); vcCall(pk, f.name || '好友'); }); li.appendChild(vb); } } }
     const vi = el('button', 'tbtn ghost vbtn', '小島'); vi.addEventListener('click', () => { closeSheet(); visitIsle(f.id, f.name); }); li.append(vi);
     const rm = el('button', 'tbtn ghost vbtn bk', '刪除'); rm.addEventListener('click', async () => { if (rm.dataset.sure !== '1'){ rm.dataset.sure = '1'; rm.textContent = '確定？'; return; } const d = await frRpc('remove_friend', { p_uid: f.id }); if (d) adoptFriends(d); }); li.appendChild(rm);
     ul.appendChild(li); }
@@ -16031,6 +16033,47 @@ function paxUi(){ let e = Pax.el; if (!Pax.st || Pax.st === 'ride'){ if (e){ e.r
   else { e.appendChild(el('span', 'tx', `👥 等${Pax.name}上車，你就一起上車（待在車子附近）`)); const n = el('button', 'tbtn ghost', '不坐了'); n.addEventListener('click', () => { txEmit({ a: 'leave', to: Pax.host }); paxEnd(); }); e.appendChild(n); }
   function toastOnce(){} }
 function paxEnd(off){ const was = Pax.st; Pax.st = null; Pax.host = null; if (was === 'ride'){ poolMeVis(true); if (off){ const fx = Math.sin(off.h), fz = Math.cos(off.h), k = (off.i || 0) + 1, x = off.x + fz * 2.0 - fx * k * 1.1, z = off.z - fx * 2.0 - fz * k * 1.1; me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = off.h; } pushPresence(true); } paxUi(); }
+/* ===== v994 好友語音（阿穎：「可以語音聊天」）=====
+   只有互相加好友、又在同一個村子連線的人才打得通；兒童模式不能用，未滿 18 歲預設關（好友分頁可以打開）。
+   按著「🎤 按著說話」才會送聲音，放開就停；對方隨時可以掛斷、靜音、檢舉。聲音是兩支手機直接連（WebRTC），不經過我們的伺服器、也不錄音。 */
+const VC = { st: null, peer: null, name: '', pc: null, mic: null, au: null, el: null, at: 0, muted: false, talk: false, q: [] };
+function vcAllowed(){ if (Kid.on) return false; const v = LS.get('tide.voice', null); return v == null ? !Kid.teen : !!v; }
+function vcFriendPeer(peer){ const u = peerUid.get(peer); return !!(u && Array.isArray(Fr.list) && Fr.list.some(f => f.id === u && f.mutual)); }
+function vcEmit(d){ try { if (room && room.connected && room.connected()) room.emit('vc', d).catch(() => {}); } catch(e){} }
+function vcUi(){ let e = VC.el; if (!VC.st){ if (e){ e.remove(); VC.el = null; } return; } if (!e){ e = VC.el = el('div', 'taxibar vcbar'); document.body.appendChild(e); } e.innerHTML = '';
+  if (VC.st === 'ring'){ e.appendChild(el('span', 'tx', `📞 ${VC.name} 打語音給你`)); const y = el('button', 'tbtn', '接聽'); y.addEventListener('click', () => vcAccept()); const n = el('button', 'tbtn ghost', '不要'); n.addEventListener('click', () => { vcEmit({ a: 'no', to: VC.peer }); vcEnd(); }); e.append(y, n); return; }
+  if (VC.st === 'call'){ e.appendChild(el('span', 'tx', `📞 打給 ${VC.name}…`)); const n = el('button', 'tbtn ghost', '取消'); n.addEventListener('click', () => vcHang()); e.appendChild(n); return; }
+  e.appendChild(el('span', 'tx', `📞 ${VC.name}${VC.st === 'link' ? '（連線中…）' : ''}`));
+  const t = el('button', 'tbtn vctalk' + (VC.talk ? ' on' : ''), VC.talk ? '🎤 說話中' : '🎤 按著說話'); const on = v => { VC.talk = v; if (VC.mic) VC.mic.getAudioTracks().forEach(k => k.enabled = v); t.classList.toggle('on', v); t.textContent = v ? '🎤 說話中' : '🎤 按著說話'; };
+  t.addEventListener('pointerdown', ev => { ev.preventDefault(); on(true); }); for (const k of ['pointerup', 'pointerleave', 'pointercancel']) t.addEventListener(k, () => on(false)); e.appendChild(t);
+  const m = el('button', 'tbtn ghost', VC.muted ? '🔇' : '🔈'); m.addEventListener('click', () => { VC.muted = !VC.muted; if (VC.au) VC.au.muted = VC.muted; vcUi(); }); e.appendChild(m);
+  const rp = el('button', 'tbtn ghost', '🚩'); rp.title = '檢舉'; rp.addEventListener('click', () => { if (!confirmOnce(rp)) return; const pk = VC.peer, nm = VC.name; vcHang(); reportPeer(pk, nm, '語音'); }); e.appendChild(rp);
+  const h = el('button', 'tbtn ghost', '掛斷'); h.addEventListener('click', () => vcHang()); e.appendChild(h); }
+async function vcMic(){ if (VC.mic) return VC.mic; if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nomic'); VC.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); VC.mic.getAudioTracks().forEach(k => k.enabled = false); return VC.mic; }
+function vcPc(){ const pc = VC.pc = new RTCPeerConnection({ iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] });
+  pc.onicecandidate = ev => { if (ev.candidate) vcEmit({ a: 'ice', to: VC.peer, c: ev.candidate.toJSON() }); };
+  pc.ontrack = ev => { if (!VC.au){ VC.au = document.createElement('audio'); VC.au.autoplay = true; VC.au.setAttribute('playsinline', ''); document.body.appendChild(VC.au); } VC.au.srcObject = ev.streams[0]; VC.au.muted = VC.muted; VC.au.play && VC.au.play().catch(() => {}); };
+  pc.onconnectionstatechange = () => { const s = pc.connectionState; if (s === 'connected'){ if (VC.st !== 'on'){ VC.st = 'on'; SFX.click(); toast('語音接通了，按著「🎤」說話'); vcUi(); } } else if (s === 'failed'){ toast('語音連不上（有些手機網路不能直接連），可以換 Wi-Fi 再試'); vcHang(); } else if (s === 'disconnected'){ setTimeout(() => { if (VC.pc === pc && pc.connectionState === 'disconnected') vcHang(); }, 6000); } };
+  for (const k of VC.mic.getTracks()) pc.addTrack(k, VC.mic); return pc; }
+async function vcCall(peer, name){ if (!vcAllowed()){ toast(Kid.on ? '兒童安全模式不能用語音' : '好友語音關著，在好友分頁上面打開'); return; } if (VC.st){ toast('已經在講電話了'); return; } if (!vcFriendPeer(peer)){ toast('要互相加好友、而且他現在在線上，才能打語音'); return; }
+  try { await vcMic(); } catch(e){ toast('要允許麥克風才能講話'); return; }
+  Object.assign(VC, { st: 'call', peer, name, at: Date.now(), q: [] }); vcEmit({ a: 'ring', to: peer }); vcUi(); setTimeout(() => { if (VC.st === 'call' && VC.peer === peer){ toast(`${name} 沒有接`); vcHang(); } }, 30000); }
+async function vcAccept(){ try { await vcMic(); } catch(e){ toast('要允許麥克風才能講話'); vcEmit({ a: 'no', to: VC.peer }); vcEnd(); return; } VC.st = 'link'; vcUi(); vcEmit({ a: 'yes', to: VC.peer }); }
+function vcHang(){ if (VC.peer) vcEmit({ a: 'bye', to: VC.peer }); vcEnd(); }
+function vcEnd(){ try { if (VC.pc) VC.pc.close(); } catch(e){} try { if (VC.mic) VC.mic.getTracks().forEach(k => k.stop()); } catch(e){} if (VC.au){ VC.au.srcObject = null; VC.au.remove(); } Object.assign(VC, { st: null, peer: null, pc: null, mic: null, au: null, talk: false, q: [] }); vcUi(); }
+async function onVcMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key; if (d.to !== mine) return;
+  if (d.a === 'ring'){ if (!vcAllowed() || !vcFriendPeer(m.peer)) { vcEmit({ a: 'no', to: m.peer, off: 1 }); return; } if (VC.st){ vcEmit({ a: 'busy', to: m.peer }); return; } const p = peers.get(m.peer); Object.assign(VC, { st: 'ring', peer: m.peer, name: p ? peerName(p) : '好友', at: Date.now() }); SFX.click(); vcUi(); setTimeout(() => { if (VC.st === 'ring' && VC.peer === m.peer) vcEnd(); }, 30000); return; }
+  if (m.peer !== VC.peer) return;
+  try {
+    if (d.a === 'no'){ toast(d.off ? `${VC.name} 沒有開語音` : `${VC.name} 現在不方便`); vcEnd(); }
+    else if (d.a === 'busy'){ toast(`${VC.name} 正在講電話`); vcEnd(); }
+    else if (d.a === 'bye'){ if (VC.st) toast('語音掛斷了'); vcEnd(); }
+    else if (d.a === 'yes' && VC.st === 'call'){ VC.st = 'link'; vcUi(); const pc = vcPc(); const o = await pc.createOffer(); await pc.setLocalDescription(o); vcEmit({ a: 'offer', to: VC.peer, sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : { type: o.type, sdp: o.sdp } }); }
+    else if (d.a === 'offer' && VC.st === 'link' && d.sdp){ const pc = vcPc(); await pc.setRemoteDescription(d.sdp); const a = await pc.createAnswer(); await pc.setLocalDescription(a); vcEmit({ a: 'answer', to: VC.peer, sdp: { type: a.type, sdp: a.sdp } }); for (const c of VC.q.splice(0)) try { await pc.addIceCandidate(c); } catch(e){} }
+    else if (d.a === 'answer' && VC.pc && d.sdp){ await VC.pc.setRemoteDescription(d.sdp); for (const c of VC.q.splice(0)) try { await VC.pc.addIceCandidate(c); } catch(e){} }
+    else if (d.a === 'ice' && d.c){ if (VC.pc && VC.pc.remoteDescription) await VC.pc.addIceCandidate(d.c); else VC.q.push(d.c); }
+  } catch(e){ console.warn('vc', e); toast('語音連不上，等一下再試'); vcHang(); } }
+function vcTick(){ if (VC.st && VC.peer && !peers.has(VC.peer)){ toast('對方離線了，語音結束'); vcEnd(); } }
 function onTxMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key, p = peers.get(m.peer);
   if (d.a === 'join' && d.to === mine && Taxi.st !== 'idle' && Taxi.st !== 'ride'){ Taxi.pax = Taxi.pax || []; if (!Taxi.pax.includes(m.peer) && Taxi.pax.length < 3){ Taxi.pax.push(m.peer); toast(`👥 ${p ? peerName(p) : '朋友'}要跟你一起坐`); taxiUi(); } return; }
   if (d.a === 'leave' && d.to === mine && Taxi.pax){ Taxi.pax = Taxi.pax.filter(k => k !== m.peer); return; }
@@ -18891,7 +18934,7 @@ function drvTick(dt, t){ const S = taxiStand(); if (!S) return; if (!Drv.f){ try
   f.av.g.visible = vis; if (f.tag) f.tag.style.display = vis ? '' : 'none'; if (f.blob) f.blob.visible = vis; if (!vis) return;
   if (off && Math.hypot(me.pos.x - x, me.pos.z - z) < 12 && Math.random() < dt / 25) f.say(['今天潮水不錯欸', '以前都跟朋友一起釣到很晚', '你也來釣啊，旁邊有位子', '有咬！……啊跑掉了'][Math.floor(Math.random() * 4)], '', 5);
   f.pos.x = x; f.pos.z = z; f.baseY = groundHeight(x, z); f.pos.y = f.baseY; f.rot = off ? r : lerpAngle(f.rot, r, 1 - Math.exp(-6 * dt)); f.speed = 0; f.update(dt, t); f.placeTag(); }
-function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); else if (Drv.f){ Drv.f.av.g.visible = false; if (Drv.f.tag) Drv.f.tag.style.display = 'none'; } } catch(e){ if (!drvTick.w){ drvTick.w = 1; console.warn('drv', e); } } try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
+function taxiTick(dt){ if (!W2) return; try { if (W2S.on) drvTick(dt, now()); else if (Drv.f){ Drv.f.av.g.visible = false; if (Drv.f.tag) Drv.f.tag.style.display = 'none'; } } catch(e){ if (!drvTick.w){ drvTick.w = 1; console.warn('drv', e); } } try { if (frameNo % 60 === 7) vcTick(); } catch(e){} try { bdayTick(); paxTick(); bpxTick(); if (frameNo % 30 === 3) ownBoatSync(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
   else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
@@ -20960,7 +21003,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {}); room.on('subbait', onSubBait, () => {}); room.on('orddone', onOrdDone, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('bx', onBxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('vc', onVcMsg, () => {}); room.on('bx', onBxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -23764,7 +23807,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後按著「🎤 按著說話」講話，放開就停。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25198,6 +25241,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u994', d:'11/28', items:[['📞','好友語音：好友分頁裡，在線上的好友旁邊有 📞，按了打給他，他按「接聽」就能講話'], ['🎤','按著「🎤 按著說話」才會送出聲音，放開就停；可以靜音對方、檢舉、掛斷。聲音是兩支手機直接連，不錄音'], ['🛡️','只有互相加好友的人打得通；兒童模式不能用，未滿 18 歲預設關（好友分頁上面可以打開）']] },
   { id:'u993', d:'11/28', items:[['✨','甩竿特效：浮標飛出去後面拖一道光，落水時炸開一圈，大家都看得到。星光 Lv.10、水光 Lv.20、金光 Lv.30、彩虹 Lv.50，釣到傳說魚拿「傳說紫焰」'], ['🏅','點左上角等級 →「甩竿特效」換'], ['🐛','修好：新主島上的水花、煙火、閃光那些小粒子特效之前都看不到，現在回來了']] },
   { id:'u992', d:'11/28', items:[['🐟','每一種傳說魚都有自己的名牌：釣到哪一種，就多一個那條魚顏色的名牌（深藍旗魚是藍的、朱紅錦鯉是紅的…），中間有金光流過去'], ['🪪','名牌框的邊加粗一點，遠一點也看得清楚']] },
   { id:'u991', d:'11/28', items:[['✨','有人釣到傳說魚，他身上會衝出一道金紫色的光柱，整座島都看得到，大概 8 秒後慢慢散掉'], ['📣','附近的人畫面上會跳「XX 釣到傳說魚了！看那道光」']] },

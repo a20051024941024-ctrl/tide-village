@@ -2844,3 +2844,7 @@ body.ui3.subbing #chat3{left:auto;right:416px;transform:none;width:min(300px,cal
 /* v992 每一種傳說魚自己的名牌：用那條魚的顏色，中間一道金光流過去 */
 .tag .nm.nfx-fish{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,var(--fc1),var(--fc2),#fff3b0,var(--fc2),var(--fc1));background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px var(--fc2);animation:nfxRun 2.4s linear infinite,nfxFish 1.8s ease-in-out infinite}
 @keyframes nfxFish{50%{box-shadow:0 0 20px var(--fc2)}}
+/* v994 好友語音的通話列 */
+.taxibar.vcbar{top:calc(var(--gt, 8px) + 92px)}
+.vcbar .vctalk{touch-action:none;user-select:none;-webkit-user-select:none}
+.vcbar .vctalk.on{background:#e8473a;color:#fff;box-shadow:0 0 0 3px rgba(232,71,58,.35)}
