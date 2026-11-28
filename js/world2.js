@@ -488,9 +488,9 @@ export function init(A){
               const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); if (g.attributes.normal.getY(0) < 0){ const P2 = g.attributes.position; for (let k = 0; k < P2.count; k += 3){ const tx = P2.getX(k + 1), tz = P2.getZ(k + 1); P2.setXYZ(k + 1, P2.getX(k + 2), y, P2.getZ(k + 2)); P2.setXYZ(k + 2, tx, y, tz); } g.computeVertexNormals(); }
               const uv = []; for (let k = 0; k < pos.length; k += 3) uv.push(pos[k] / 6, pos[k + 2] / 6); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); gs.push(g); } } }
         if (gs.length){ const jm = new THREE.Mesh(mergeGeometries(gs, false), MAT.car); jm.receiveShadow = true; root.add(jm); } }
-      /* v972 潮搭Go 乘車處（作者 11/28：「做一個區域，阿速會開過來，不要憑空出現憑空消失」「開進來開出去」，附了車站排班計程車的照片）
+      /* v972 潮搭Go 乘車處（作者 11/28：「做一個區域，阿萬會開過來，不要憑空出現憑空消失」「開進來開出去」，附了車站排班計程車的照片）
          圓環內側、商店街路口西邊：路邊挖一條停車灣（柏油）、上面一整片海洋藍的遮雨棚、白柱子、黃色路緣、靠廣場那邊有欄杆，中間留一個入口，掛「潮搭Go 乘車處」的牌子。
-         三個停車格停著阿速的車；叫車的時候其中一台開出去、載完人再開回來停好。 */
+         三個停車格停著阿萬的車；叫車的時候其中一台開出去、載完人再開回來停好。 */
       { const T = P(892, 630), C0 = P(PL[0], PL[1]); let RR = null, ti = 0, td = 1e9; for (const L of laneRuns) for (let i = 0; i < L.R.length; i++){ const d = Math.hypot(L.R[i][0] - T[0], L.R[i][1] - T[1]); if (d < td){ td = d; RR = L; ti = i; } }
         if (RR && ti > 40 && ti < RR.R.length - 41){ const R = RR.R, yy = RR.yy, at = k => R[Math.max(0, Math.min(R.length - 1, ti + Math.round(k)))], tan = k => { const a = at(k - 4), b = at(k + 4), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
           const c = at(0), t0 = tan(0), nIn = (() => { let nx = -t0[1], nz = t0[0]; if ((C0[0] - c[0]) * nx + (C0[1] - c[1]) * nz < 0){ nx = -nx; nz = -nz; } return [nx, nz]; })(), side = (-t0[1] * nIn[0] + t0[0] * nIn[1]) > 0 ? 1 : -1;   /* side：沿著陣列方向開、右手邊是廣場嗎（右駕靠右） */
