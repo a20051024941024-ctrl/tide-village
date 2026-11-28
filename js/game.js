@@ -2554,15 +2554,20 @@ const Voy = { on:false, m:null, btn:null };
 const CUT_DOCK = new Set(['wilddock']);
 const LV_GATE = { dive: 8, frostdock: 12 };   /* v997 照研究的順序：潛水、冰封群島留著，但等級到了才開（新玩家先專心釣魚） */
 function lvGate(k){ const need = LV_GATE[k]; if (!need) return 0; let L = 99; try { L = lvOf(calcXP()); } catch(e){} return L >= need ? 0 : need; }   /* v997 作者：「體育場跟荒島先拿掉」→ 荒島（漂流島）不能再坐船去；已經在島上的人照樣能坐船回來 */
-function voyStart(tp){ if (!tp) return; if (CUT_DOCK.has(tp.id)){ toast('那座島現在去不了了'); return; } { const g = lvGate(tp.id); if (g){ toast(`要到 Lv.${g} 阿海才會載你去那裡`); return; } } const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
+/* v1022 作者：「苔森之島…動畫阿」→ 去外島有開船的動畫，回來卻一下就到了。從外島的碼頭找阿海回村子，也坐船開回新主島：把去的航道倒過來開 */
+function voyBackPath(tp){ if (!W2S.on || !W2 || !W2.posts || !W2.posts.voy) return null; const r = w2Redirect(tp); if (!r || r.id !== 'w2harbor') return null;
+  let id = null, bd = 60; for (const k in SEA_LANES){ if (CUT_DOCK.has(k)) continue; const d0 = TRAVEL.find(t => t.id === k); if (!d0) continue; const d = Math.hypot(me.pos.x - d0.x, me.pos.z - d0.z); if (d < bd){ bd = d; id = k; } } if (!id) return null;
+  const f = w2VoyPath(SEA_LANES[id], id), L = f.P.length; return { P: f.P.slice().reverse(), jump: L - f.jump, from: id }; }
+function voyStart(tp){ if (!tp) return; if (CUT_DOCK.has(tp.id)){ toast('那座島現在去不了了'); return; } { const g = lvGate(tp.id); if (g){ toast(`要到 Lv.${g} 阿海才會載你去那裡`); return; } } const lane = SEA_LANES[tp.id], back = !lane && !onIsle && !Voy.on ? voyBackPath(tp) : null; if ((!lane && !back) || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
-  const W2V = W2S.on && W2 && W2.posts && W2.posts.voy && W2.near(me.pos.x, me.pos.z) ? w2VoyPath(lane, tp.id) : null;   /* v933 從新主島出發：先開出新主島的港口，再接到外島的航道 */
+  const W2V = back || (W2S.on && W2 && W2.posts && W2.posts.voy && W2.near(me.pos.x, me.pos.z) ? w2VoyPath(lane, tp.id) : null);   /* v933 從新主島出發：先開出新主島的港口，再接到外島的航道 */
   const P = W2V ? W2V.P : [VOY_DOCK.slice(0, 2), [40, -30.5], [52, -30], [56, -50]].concat(lane), cum = [0];   /* 沿著出港的水道，不壓過碼頭 */ for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + (W2V && i === W2V.jump ? 0 : Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]))); const len = cum[cum.length - 1];   /* 中間那一大段海算 0 公尺：開到那裡畫面一暗就接過去 */
   if (!Voy.m){ Voy.m = twBoat(0, 0, 0, 1.7); Voy.m.visible = false; }   /* v596 作者：「船的比例不對」→ 0.82 倍的船比人還小，放大到 1.7 倍（船長大約 10 公尺、駕駛艙比人高） */
   if (!Voy.btn){ const b = el('button', 'tbtn', '跳過 ▶'); b.id = 'voySkip'; b.style.cssText = 'position:fixed;right:calc(var(--gr, 8px) + 10px);top:calc(var(--gt, 8px) + 96px);z-index:40;padding:10px 18px;font-size:15px'; b.addEventListener('click', () => voyEnd(true)); document.body.appendChild(b); Voy.btn = b; }
-  const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, jump: W2V ? W2V.jump : 0, jumped: false, dur: clamp(len / 13.5, 9, 22), hd: VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
+  const go = () => { Object.assign(Voy, { on: true, tp, P, cum, len, t: 0, jump: W2V ? W2V.jump : 0, jumped: false, dur: clamp(len / 13.5, 9, 22), hd: back ? null : VOY_DOCK[2] }); Voy.m.visible = true; Voy.btn.hidden = false; me.sitting = false; voyDrive(0.001); pushPresence(true); flash(`出發：${tp.label}`, 1.8); if (!LS.get('tide.voyTold', 0)){ LS.set('tide.voyTold', 1); toast('現在坐阿海的船會真的開一段。沿路看看海上有什麼；不想等可以按右上的「跳過」', 8); } };
   Voy.btn.hidden = true;
   const startBoard = () => { Voy.board = { st: 'walk', t: 0, go }; try { SFX.cast(); } catch(e){} };
+  if (back){ const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { go(); setTimeout(() => fx.classList.remove('on'), 150); }, 420); return; }   /* v1022 從外島坐回來：畫面一暗就在船上了 */
   if (Math.hypot(me.pos.x - VOY_EDGE[0], me.pos.z - VOY_EDGE[1]) > 14){ const fx = $('#fadeFx'); fx.classList.add('on'); setTimeout(() => { if (W2V){ me.pos.x = VOY_EDGE[0] + 1.6; me.pos.z = VOY_EDGE[1] - 1.4; } else { me.pos.x = VOY_EDGE[0] - 2.5; me.pos.z = VOY_EDGE[1] + 0.5; }   /* v933 新主島的棧橋：站在棧橋上（不是水裡） */ me.baseY = groundHeight(me.pos.x, me.pos.z); Jump.gy = me.baseY; startBoard(); setTimeout(() => fx.classList.remove('on'), 150); }, 420); } else startBoard(); }
 /* v679 作者：「出海的船去哪了」「坐船時要有上船下船的動畫」→ 阿海的船平常就停在港口那根小碼頭的南邊；
    坐船時先從阿海那裡走到碼頭邊、跳上船（離太遠才先淡出移到碼頭），船再從碼頭開出去；到了以後從船邊跳上岸。 */
@@ -24245,6 +24250,7 @@ function renderTab0(){
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
       ["村子怎麼走", "home", [
+      "⛴️ 從外島（苔森之島、冰封群島、深海浮台、神秘島、荒島）找阿海回村子，也會坐船一路開回新主島港口，不想等可以按「跳過」",
       "🐟 真實魚：鬼頭刀、鯖魚、竹莢魚、石狗公、白帶魚、梭子魚、青甘、紅甘、鯷魚、雞魚、黑鯛、黑毛換成真的魚模型；新來 8 種：海鱸、大眼平鮋、馬加鰆、黃鰭鮪、牛尾魚、嘉鱲魚、長尾黑毛、星點笛鯛（外海和港口）","聯名活動週：阿穎週、阿默週、阿萬週輪流，每週日 00:00 換。這一週釣到的魚都算：20 條名牌框、40 條眼睛顏色、80 條聯名釣竿（甩竿有那個人顏色的光）、150 條整套聯名衣服。手機 → 活動 → 聯名活動，到了就按「領取」。", "水裡的地形：新主島的水裡有水草叢、礁石，還有棧橋的柱子底下、河流進海的河口。每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚就比較多。哪種魚在哪裡不會告訴你，要自己釣出經驗：同一種魚在同一種地方釣到 3 次，圖鑑那條魚會寫「常在：水草邊」。海面上以前的海鳥、漣漪、魚影、氣泡拿掉了。", "望遠鏡：釣具店「🧰工具」🪙1,200。買了之後打開手機點「🔭 望遠鏡」，或背包「🎣 釣組」→「拿出望遠鏡」。手指拖曳看四周，＋ 拉近。遠方偶爾會出現海豚、鯨魚、流星、燈籠船這些稀奇的東西，對準看一下就記進「📖 望遠鏡筆記」，不同時間和天氣看到的不一樣。十一種集滿拿「🔭 天空名牌」。", "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。掛著釣偶爾會脫鉤跑掉：沒裝鉤子大約 4 條跑 1 條，阿鐵做的鉤子越好越少跑（金鉤大約 12 條跑 1 條），釣竿磨損完會跑更多。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
@@ -25631,10 +25637,16 @@ function frame(){
 requestAnimationFrame(frame);
 /* v622 作者：「每次走過來都會卡一下」→ 量到走近博物館那幾步，一格要好幾秒，全花在 three.js 第一次編譯著色器（getProgramInfoLog），一路上新編了 41 種。
    改成載入時把場景裡所有東西（包含現在藏起來的）的著色器先在背景編好：手機支援平行編譯時用 compileAsync，不會卡畫面；載入後 10 秒再補一次（後來才蓋的村民、看板）。 */
+/* v1022 作者截圖：「Uncaught TypeError … reading 'isReady'」→ three.js 自己的 compileAsync 在等著色器編好時，如果中間有材質被換掉或丟掉，
+   它會去讀一個不存在的程式而整個跳錯。改成自己等：讀不到的就當作好了，最多等 6 秒 */
+function warmAsync(){ const mats = renderer.compile(scene, camera); const ext = renderer.extensions.has('KHR_parallel_shader_compile');
+  return new Promise(res => { if (!ext || !mats || !mats.size){ res(); return; } let n = 0;
+    const chk = () => { try { for (const m of [...mats]){ const pg = renderer.properties.get(m).currentProgram; if (!pg || !pg.isReady || pg.isReady()) mats.delete(m); } } catch(e){ mats.clear(); }
+      if (!mats.size || ++n > 600){ res(); return; } setTimeout(chk, 10); }; chk(); }); }
 function shaderWarm(tag){ try { const lit = new Set(); scene.traverseVisible(o => { if (o.isLight) lit.add(o); });   /* 燈的數量要跟平常一樣，不然編出來的著色器（NUM_POINT_LIGHTS 不同）根本用不到 */
     const hid = [], off = []; scene.traverse(o => { if (o.isLight){ if (!lit.has(o) && o.visible){ off.push(o); o.visible = false; } return; } if (!o.visible){ hid.push(o); o.visible = true; } });
     const t0 = performance.now(), n0 = renderer.info.programs ? renderer.info.programs.length : 0;
-    let pr = null; try { pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : (renderer.compile(scene, camera), null); } finally { for (const o of hid) o.visible = false; for (const o of off) o.visible = true; }
+    let pr = null; try { pr = renderer.compileAsync ? warmAsync() : (renderer.compile(scene, camera), null); } finally { for (const o of hid) o.visible = false; for (const o of off) o.visible = true; }
     const done = () => { shaderWarm.log = (shaderWarm.log || '') + ` ${tag}:${n0}->${renderer.info.programs ? renderer.info.programs.length : '?'}/${Math.round(performance.now() - t0)}ms`; };
     if (pr && pr.then) pr.then(done, done); else done(); } catch(e){ shaderWarm.err = String(e); } }
 { const fStart = () => frameNo; let f0 = null;
@@ -25691,6 +25703,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1022', d:'11/29', items:[['⛴️','從苔森之島這些外島找阿海回村子，現在也會坐船開回來，不會一下就到了'], ['🛠️','修好有時候會跳出「遊戲出錯了… isReady」的錯誤']] },
   { id:'u1021', d:'11/29', items:[['🐟','鬼頭刀和 11 種海魚（鯖魚、竹莢魚、石狗公、白帶魚、梭子魚、青甘、紅甘、鯷魚、雞魚、黑鯛、黑毛）換成真的魚模型，鱗片、鰭都看得清楚'], ['🆕','新來 8 種魚：港口有海鱸、馬加鰆、黃鰭鮪、長尾黑毛；外海有大眼平鮋（晚上）、牛尾魚、嘉鱲魚、星點笛鯛'], ['🪨','新魚也有喜歡的地方：大眼平鮋和星點笛鯛在礁石邊、長尾黑毛在棧橋柱子底下、海鱸在河口和棧橋、牛尾魚在河口']] },
   { id:'u1020', d:'11/29', items:[['🔔','竿子插在竿架上走開時，魚咬了會響鈴，要在 15 秒內跑回來自己拉，竿架不再自己收魚'], ['🧺','跑船生意拿掉了：阿嬤不收魚了，船上還有魚的話，魚缸那裡可以拿去賣掉']] },
   { id:'u1019', d:'11/29', items:[['🏝️','小島商店的房子和方塊都有小圖了（以前房子只有符號、方塊是空的）'], ['🐟','釣具店牆上的旗魚擺正，平平地掛在一塊木板前'], ['🎣','村民走去市場、食堂的路上會把釣竿收起來'], ['🪑','長椅上的位子隔開一點，兩個人坐隔壁不會擠在一起'], ['🚕','一起坐車改成叫車的人點名邀請：車子來的時候，叫車的人旁邊會出現「👥 邀 某某」，被邀的人才會看到「一起坐」'], ['🏛️','村公所改小一點、往東挪，前面不壓路、後面不壓鐵軌'], ['💬','村民講話停久一點：每句至少 6 秒，字多就更久'], ['🎣','停在棧橋中間的船放在正中間，阿默拋竿不會拋到船上'], ['🧑','好友列表顯示每個人自己的新人物大頭照（沒在線上的也看得到；對方要更新遊戲後進來一次）'], ['⛵','港口外面繞圈開的漁船改走外海那一圈，不會再穿過碼頭']] },
