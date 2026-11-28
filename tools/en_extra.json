@@ -9886,5 +9886,18 @@
  "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。": "Friend voice chat: Friends tab → tap 📞 next to an online friend. Once connected just talk; tap \"🎤 Mic on\" to mute, tap again to unmute. Don't want calls? Turn off \"Friend voice\" at the top of the Friends tab.",
  "大家說的話在頭上停久一點，字多的停更久": "Chat bubbles stay above heads longer — longer messages stay even longer",
  "點一下別人頭上的話，可以回表情（👍😂😮❤️👏），從他頭上冒出來，大家都看得到": "Tap someone's speech bubble to react (👍😂😮❤️👏) — it pops out above their head for everyone to see",
- "附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手": "When someone nearby lands a rare or legendary fish, a \"👏 Nice!\" button pops up — tap to cheer"
+ "附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手": "When someone nearby lands a rare or legendary fish, a \"👏 Nice!\" button pops up — tap to cheer",
+ "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。": "Friend pranks: walk up to a friend (within 4 m), tap their speech bubble, or in the Friends tab tap \"⋯\" → \"🐟 Fish slap\" to whack them with a fish. Stars spin over their head and they stumble back — nothing is lost. Only mutual friends can slap you, and you can tap \"Slap back\".",
+ "好友互整：走到好友旁邊，好友分頁按他的「⋯」→「🐟 用魚拍一下」（或點他頭上的話，最右邊的 🐟），甩一條魚啪他一下": "Friend pranks: walk up to a friend, then Friends tab \"⋯\" → \"🐟 Fish slap\" (or tap their speech bubble, 🐟 on the right) to whack them with a fish",
+ "被拍的人頭上轉星星、往後退一步、喊一聲，不會少任何東西；畫面跳「拍回去」可以馬上還手": "The slapped player sees stars, stumbles back and yelps — nothing is lost. A \"Slap back\" button lets them return the favor",
+ "只有互相加好友的人能拍你，不是好友拍不到": "Only mutual friends can slap you — strangers can't",
+ "🐟 用魚拍一下": "🐟 Fish slap",
+ "用魚拍一下": "Fish slap",
+ "互相加好友才能用魚拍他": "You need to be mutual friends to fish-slap them",
+ "魚還在甩，等一下": "Still swinging — wait a sec",
+ "他不在附近": "They're not nearby",
+ "哎唷！": "Ouch!",
+ "啪！": "Slap!",
+ "欸！好腥！": "Ew! So fishy!",
+ "你給我記住🐟": "You'll pay for that 🐟"
 }

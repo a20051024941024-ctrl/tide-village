@@ -9610,5 +9610,18 @@
  "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。": "Obrolan suara teman: tab Teman → ketuk 📞 di samping teman yang online. Setelah tersambung langsung bicara saja; ketuk \"🎤 Mik nyala\" untuk mematikan, ketuk lagi untuk menyalakan. Tidak mau ditelepon? Matikan \"Suara teman\" di atas tab Teman.",
  "大家說的話在頭上停久一點，字多的停更久": "Gelembung obrolan bertahan lebih lama — pesan panjang lebih lama lagi",
  "點一下別人頭上的話，可以回表情（👍😂😮❤️👏），從他頭上冒出來，大家都看得到": "Ketuk gelembung ucapan seseorang untuk bereaksi (👍😂😮❤️👏) — muncul di atas kepalanya dan semua orang bisa melihat",
- "附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手": "Kalau ada yang menangkap ikan langka atau legendaris di dekatmu, muncul tombol \"👏 Hebat!\" — ketuk untuk bersorak"
+ "附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手": "Kalau ada yang menangkap ikan langka atau legendaris di dekatmu, muncul tombol \"👏 Hebat!\" — ketuk untuk bersorak",
+ "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。": "Iseng teman: dekati teman (dalam 4 m), ketuk gelembung ucapannya, atau di tab Teman ketuk \"⋯\" → \"🐟 Tampar pakai ikan\" untuk memukulnya dengan ikan. Bintang berputar di atas kepalanya dan dia mundur selangkah — tidak ada yang hilang. Hanya teman yang saling berteman yang bisa menamparmu, dan kamu bisa ketuk \"Balas\".",
+ "好友互整：走到好友旁邊，好友分頁按他的「⋯」→「🐟 用魚拍一下」（或點他頭上的話，最右邊的 🐟），甩一條魚啪他一下": "Iseng teman: dekati teman, lalu tab Teman \"⋯\" → \"🐟 Tampar pakai ikan\" (atau ketuk gelembung ucapannya, 🐟 paling kanan) untuk memukulnya dengan ikan",
+ "被拍的人頭上轉星星、往後退一步、喊一聲，不會少任何東西；畫面跳「拍回去」可以馬上還手": "Yang ditampar melihat bintang, mundur dan berteriak — tidak ada yang hilang. Tombol \"Balas\" muncul untuk membalas",
+ "只有互相加好友的人能拍你，不是好友拍不到": "Hanya teman yang saling berteman yang bisa menamparmu — orang asing tidak bisa",
+ "🐟 用魚拍一下": "🐟 Tampar pakai ikan",
+ "用魚拍一下": "Tampar pakai ikan",
+ "互相加好友才能用魚拍他": "Harus saling berteman untuk menamparnya pakai ikan",
+ "魚還在甩，等一下": "Ikannya masih diayun, tunggu sebentar",
+ "他不在附近": "Dia tidak ada di dekat sini",
+ "哎唷！": "Aduh!",
+ "啪！": "Plak!",
+ "欸！好腥！": "Ih! Amis!",
+ "你給我記住🐟": "Awas kamu ya 🐟"
 }
