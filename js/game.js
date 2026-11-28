@@ -7178,6 +7178,7 @@ function updatePlayer(dt){
   if (Voy.on){ voyDrive(dt); return; }   /* v579 坐阿海的船 */
   if (Voy.board && voyBoardTick(dt)) return; if (Voy.hop && voyHopTick(dt)) return;   /* v679 上船、下船 */
   if (myBoat){ updateBoat(dt, ix, iz, L, locked); return; }
+  if (paxRiding()){ const p = peers.get(Pax.host); if (p){ const f = p.fisher; me.pos.x = f.pos.x; me.pos.z = f.pos.z; me.baseY = f.baseY; Jump.gy = me.baseY; me.rot = f.rot; } me.speed = 0; return; }   /* v980 一起坐車：跟著叫車那個人的車走 */
   if (taxiRiding()){ const c = Taxi.car; if (c){ me.pos.x = c.position.x; me.pos.z = c.position.z; me.baseY = c.position.y; Jump.gy = me.baseY; me.rot = c.rotation.y; } me.speed = 0; return; }   /* v962 坐潮搭Go：人跟著車走（人藏起來） */
   if (Ride.out){ const h = Ride.out; h.t += dt; const k = Math.min(1, h.t / 0.42), e = k * k * (3 - 2 * k), gy = groundHeight(h.tx, h.tz); me.pos.x = h.x + (h.tx - h.x) * e; me.pos.z = h.z + (h.tz - h.z) * e; me.baseY = h.y + (gy - h.y) * e + Math.sin(k * Math.PI) * 0.32; Jump.gy = me.baseY; me.rot = lerpAngle(me.rot, Math.atan2(h.tx - h.x, h.tz - h.z), 1 - Math.exp(-14 * dt)); me.speed = 0; if (k >= 1){ Ride.out = null; me.baseY = gy; Jump.gy = gy; pushPresence(true); } return; }   /* v923 下小火車：從位子跨到月台上 */
   if (mySeat){
@@ -15883,6 +15884,27 @@ function turtleCareBox(p){ const box = el('li', 'turtlecare'), inShop = !!Pets.t
   row('🧽', '換水、刷殼', inShop ? '用店裡的水槽換水，龜博士借你軟刷輕輕刷殼。一天一次。' : atIsle ? '用小島的水盆換水，軟刷輕輕刷殼。一天一次，保持光澤。' : '要在自己的小島上用水盆（一天一次）。', '清潔', p.clean, () => { if (!atIsle){ toast('回到自己的小島用水盆換水'); renderTab(); return; } turtleCare(p, 'clean'); });
   row('🧴', '龜殼保養（🪙120）', p.oilDays != null && p.oilDays < 30 ? `一個月最多一次（${p.oilDays} 天前保養過）。太常塗反而會悶住龜殼。` : '偶爾保養就好，一個月最多一次。', '保養', p.oilDays != null && p.oilDays < 30, () => turtleCare(p, 'oil'));
   return box; }
+/* ===== v980 組隊搭車（作者 11/28：「那有做組隊搭車嗎」）=====
+   你叫了潮搭Go，附近 25 公尺內的人會看到「一起坐？」→ 按「一起坐」就跟上。你上車的時候，跟上的人（最多 3 個）一起進車子，跟著你的車走；到了大家一起下車。
+   別人看到的是一台車（叫車的人的車），一起坐的人藏在車裡（presence cr=2）。 */
+const Pax = { st: null, host: null, dest: '', name: '', el: null, at: 0 };
+function txEmit(d){ try { if (room && room.connected && room.connected()) room.emit('tx', d).catch(() => {}); } catch(e){} }
+function paxUi(){ let e = Pax.el; if (!Pax.st || Pax.st === 'ride'){ if (e){ e.remove(); Pax.el = null; } if (Pax.st === 'ride') toastOnce(); return; }
+  if (!e){ e = Pax.el = el('div', 'taxibar pax'); document.body.appendChild(e); } e.innerHTML = '';
+  if (Pax.st === 'invited'){ e.appendChild(el('span', 'tx', `👥 ${Pax.name} 叫了潮搭Go 去「${Pax.dest}」，一起坐？`)); const y = el('button', 'tbtn', '一起坐'); y.addEventListener('click', () => { Pax.st = 'joined'; txEmit({ a: 'join', to: Pax.host }); SFX.click(); paxUi(); }); e.appendChild(y); const n = el('button', 'tbtn ghost', '不用'); n.addEventListener('click', () => paxEnd()); e.appendChild(n); }
+  else { e.appendChild(el('span', 'tx', `👥 等${Pax.name}上車，你就一起上車（待在車子附近）`)); const n = el('button', 'tbtn ghost', '不坐了'); n.addEventListener('click', () => { txEmit({ a: 'leave', to: Pax.host }); paxEnd(); }); e.appendChild(n); }
+  function toastOnce(){} }
+function paxEnd(off){ const was = Pax.st; Pax.st = null; Pax.host = null; if (was === 'ride'){ poolMeVis(true); if (off){ const fx = Math.sin(off.h), fz = Math.cos(off.h), k = (off.i || 0) + 1, x = off.x + fz * 2.0 - fx * k * 1.1, z = off.z - fx * 2.0 - fz * k * 1.1; me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = off.h; } pushPresence(true); } paxUi(); }
+function onTxMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data, mine = room && room.key, p = peers.get(m.peer);
+  if (d.a === 'join' && d.to === mine && Taxi.st !== 'idle' && Taxi.st !== 'ride'){ Taxi.pax = Taxi.pax || []; if (!Taxi.pax.includes(m.peer) && Taxi.pax.length < 3){ Taxi.pax.push(m.peer); toast(`👥 ${p ? peerName(p) : '朋友'}要跟你一起坐`); taxiUi(); } return; }
+  if (d.a === 'leave' && d.to === mine && Taxi.pax){ Taxi.pax = Taxi.pax.filter(k => k !== m.peer); return; }
+  if (d.a === 'call'){ if (Taxi.st !== 'idle' || Pax.st || !p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 25) return; Pax.st = 'invited'; Pax.host = m.peer; Pax.dest = String(d.dest || '').slice(0, 20); Pax.name = peerName(p); Pax.at = Date.now(); paxUi(); return; }
+  if (m.peer !== Pax.host) return;
+  if (d.a === 'cancel'){ if (Pax.st !== 'ride') { toast(`${Pax.name}不坐了`); paxEnd(); } return; }
+  if (d.a === 'go' && Array.isArray(d.pax) && d.pax.includes(mine) && Pax.st === 'joined'){ if (!p || Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) > 35){ toast('離車子太遠，沒趕上這班車'); paxEnd(); return; } Pax.st = 'ride'; Pax.seat = d.pax.indexOf(mine); if (mySeat && !mySeat.train) standUp(); poolMeVis(false); SFX.click(); paxUi(); pushPresence(true); toast(`🚕 跟${Pax.name}一起坐車去「${Pax.dest}」`); return; }
+  if (d.a === 'off' && Pax.st === 'ride'){ paxEnd({ x: +d.x, z: +d.z, h: +d.h, i: Pax.seat }); toast(`到「${Pax.dest}」了`); return; } }
+function paxTick(){ if (Pax.st === 'invited' && Date.now() - Pax.at > 120000) paxEnd(); if (Pax.st !== 'ride') return; const p = peers.get(Pax.host); if (!p || !p.pres || p.pres.cr !== 1){ if (!Pax.lost) Pax.lost = now(); if (now() - Pax.lost > 4){ Pax.lost = 0; paxEnd({ x: me.pos.x, z: me.pos.z, h: me.rot, i: 0 }); } return; } Pax.lost = 0; }
+function paxRiding(){ return Pax.st === 'ride'; }
 /* v977 手機上的「潮搭Go」App（作者 11/28：「我想設定是在手機上的 APP」）：選地方 → 叫車。坐車中、車子開過來的時候打開，會看到現在的狀態 */
 function renderTideGo(body){ const head = el('div', 'shophead'); head.innerHTML = '<b>🚕 潮搭Go</b><span class="coinpill">司機 阿萬</span>'; body.appendChild(head);
   if (!taxiOn()){ body.appendChild(el('div', 'empty', '潮搭Go 只在主島上開。回到主島再叫車吧。')); return; }
@@ -15892,7 +15914,7 @@ function renderTideGo(body){ const head = el('div', 'shophead'); head.innerHTML 
   const sec = (title, list) => { if (!list.length) return; body.appendChild(el('div', 'ph-sec', title)); const ul = el('ul', 'shoplist'); for (const o of list){ const li = el('li', ''); li.appendChild(el('span', 'tci', o.ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', o.name)); const m = Math.round(Math.hypot(o.x - me.pos.x, o.z - me.pos.z)); d.appendChild(el('div', 'sub2', m < 45 ? `很近（${m} 公尺），走過去就到了` : `大約 ${m} 公尺`)); li.appendChild(d); const b = el('button', 'tbtn', m < 45 ? '帶我走' : '叫車'); b.addEventListener('click', () => go(o.name, o.x, o.z, o.rot)); li.appendChild(b); ul.appendChild(li); } body.appendChild(ul); };
   sec('地方', (W2.spots || []).filter(([nm]) => nm !== '玩家建地').map(([nm, lx, lz]) => ({ ic: (W2MAP_TXT[nm] && W2MAP_TXT[nm][0]) || '📍', name: nm, x: W2.ox + lx, z: W2.oz + lz, rot: me.rot })));
   sec('店', (W2.doors || []).map(d => ({ ic: W2_DOOR_IC[d.k] || '🚪', name: d.label, x: d.x + Math.sin(d.face) * 1.6, z: d.z + Math.cos(d.face) * 1.6, rot: d.face + Math.PI })));
-  body.appendChild(el('p', 'sub', '👥 跟朋友一起坐：快做好了，之後可以邀附近的朋友上同一台車。')); }
+  body.appendChild(el('p', 'sub', '👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。')); }
 function renderTurtleShop(body){   /* v974 慢慢烏龜屋：龜博士的店。照顧小烏龜的事都在這裡做；店裡有曬背燈和換水的水槽，不用回小島也能曬太陽、換水 */
   const head = el('div', 'shophead'); head.innerHTML = `<b>🐢 慢慢烏龜屋</b><span class="coinpill">🪙 ${rec.coins.toLocaleString()}</span>`; body.appendChild(head);
   body.appendChild(el('p', 'sub', '龜博士：「慢慢來，烏龜都不急。殼要漂亮，靠的是曬太陽、吃得均衡、水乾淨。店裡有曬背燈和水槽，下雨天、沒回小島也可以照顧。」'));
@@ -18679,7 +18701,8 @@ function taxiDrop(){ if (Taxi.car){ const pk = Taxi.atSlot && Taxi.park && Taxi.
 function taxiUi(){ let e = Taxi.el; if (Taxi.st === 'idle'){ if (e) e.remove(); Taxi.el = null; return; }
   if (!e){ e = Taxi.el = el('div', 'taxibar'); document.body.appendChild(e); }
   const d = Taxi.dest, eta = Taxi.path ? Math.max(1, Math.round((Taxi.path.len - Taxi.s) / 7.5)) : 0, w = Taxi.st === 'come' ? `🚕 阿萬從乘車處開過來了，大約 ${eta} 秒，在原地等就好` : Taxi.st === 'wait' ? (Taxi.atSlot ? '🚕 乘車處就在旁邊，走過去上車（跟著箭頭）' : '🚕 車到了！走到車子旁邊就會上車') : (bdayIs('wan') ? '🎂 阿萬：「今天是我生日，載你特別開心！」・' : '') + `🚕 坐車去「${d.name}」・轉動畫面看看風景`;
-  const k = Taxi.st + '|' + (Taxi.st === 'come' ? Math.ceil(eta / 5) : '') + w.length; if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w));
+  const px = (Taxi.pax || []).map(k => { const p = peers.get(k); return p ? peerName(p) : ''; }).filter(Boolean), w2x = px.length ? `・👥 ${px.join('、')} 一起坐` : '';
+  const k = Taxi.st + '|' + (Taxi.st === 'come' ? Math.ceil(eta / 5) : '') + w.length + w2x; if (e._k === k) return; e._k = k; e.innerHTML = ''; e.appendChild(el('span', 'tx', w + w2x));
   { const go = el('button', 'tbtn', '⚡ 直接到'); go.addEventListener('click', () => taxiSkip()); e.appendChild(go); }
   if (Taxi.st === 'come' || Taxi.st === 'wait'){ const x = el('button', 'tbtn ghost', '不坐了'); x.addEventListener('click', () => taxiEnd(true)); e.appendChild(x); } }
 function taxiTake(){ /* 叫一台車：先找乘車處停著的，沒有就叫正在開回去的那台 */
@@ -18693,23 +18716,23 @@ function taxiCall(dest){ if (!dest) return; const tp = () => travelTo({ id: 'w2m
   if (c && (Taxi.st === 'come' || Taxi.st === 'wait')){ const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, pick); P = L && taxiLane(L, [[c.position.x, c.position.z]]); }
   else { const tk = taxiTake(); if (!tk){ tp(); return; } c = tk.car; slot = tk.slot;
     if (tk.fromSlot){ const S = taxiStand(); if (Math.hypot(me.pos.x - S.x, me.pos.z - S.z) < 40){   /* 人就在乘車處旁邊：車在格子裡等你，走過去上車（不要繞一大圈開過來） */
-      Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = null; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; Taxi.atSlot = true; Taxi.st = 'wait'; SFX.click(); taxiUi(); return; } }
+      Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = null; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; Taxi.atSlot = true; Taxi.st = 'wait'; Taxi.pax = []; txEmit({ a: 'call', dest: dest.name }); SFX.click(); taxiUi(); return; } }
     Taxi.atSlot = false; if (tk.fromSlot) P = taxiOutPath(slot, pick); else { const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, pick); P = L && taxiLane(L, [[c.position.x, c.position.z]]); } }
   if (!P){ if (c && c !== Taxi.car) taxiSendBack(c, slot); tp(); return; }
-  Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = P; Taxi.s = 0; Taxi.v = Math.max(2, Taxi.v || 0); Taxi.t = 0; Taxi.st = 'come'; taxiPlace();
+  Taxi.dest = dest; Taxi.pick = pick; Taxi.drop = drop; Taxi.car = c; Taxi.slot = slot; Taxi.path = P; Taxi.s = 0; Taxi.v = Math.max(2, Taxi.v || 0); Taxi.t = 0; Taxi.st = 'come'; Taxi.pax = []; taxiPlace(); txEmit({ a: 'call', dest: dest.name });
   SFX.click(); taxiUi(); }
-function taxiEnd(quiet){ if (Taxi.st === 'ride') poolMeVis(true); taxiDrop(); Taxi.st = 'idle'; Taxi.dest = null; taxiUi(); pushPresence(true); if (!quiet) SFX.click(); }
+function taxiEnd(quiet){ if (Taxi.st === 'ride') poolMeVis(true); if (Taxi.st !== 'idle' && Taxi.st !== 'ride') txEmit({ a: 'cancel' }); else if (Taxi.st === 'ride' && Taxi.car) txEmit({ a: 'off', x: Taxi.car.position.x, z: Taxi.car.position.z, h: Taxi.car.rotation.y }); taxiDrop(); Taxi.st = 'idle'; Taxi.dest = null; taxiUi(); pushPresence(true); if (!quiet) SFX.click(); }
 function taxiSkip(){ const d = Taxi.dest; taxiEnd(true); if (d) travelTo({ id: 'w2m:' + d.name, label: d.name, x: d.x, z: d.z, rot: d.rot != null ? d.rot : me.rot }); }
 function taxiGetOff(){ const d = Taxi.dest, c = Taxi.car, fx = Math.sin(c.rotation.y), fz = Math.cos(c.rotation.y), x = c.position.x + fz * 2.0, z = c.position.z - fx * 2.0;   /* 從右邊的車門下車（人行道那一邊） */
-  me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = c.rotation.y; poolMeVis(true);
+  me.pos.x = x; me.pos.z = z; me.baseY = groundHeight(x, z); Jump.gy = me.baseY; me.rot = c.rotation.y; poolMeVis(true); txEmit({ a: 'off', x: c.position.x, z: c.position.z, h: c.rotation.y });
   Taxi.st = 'idle'; taxiDrop(); Taxi.dest = null; pushPresence(true); taxiUi(); toast('🚕 阿萬：「到了！下次再叫我～」');
   if (d && Math.hypot(d.x - x, d.z - z) > 14) setTimeout(() => navTo(d.name, d.x, d.z), 600); else if (d) toast(`到「${d.name}」了`); }
-function taxiTick(dt){ if (!W2) return; try { bdayTick(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
+function taxiTick(dt){ if (!W2) return; try { bdayTick(); paxTick(); } catch(e){} taxiParkInit(); taxiRetTick(dt); if (Taxi.st === 'idle') return; if (!Taxi.car){ taxiEnd(true); return; } Taxi.t += dt;
   const T = { car: Taxi.car, path: Taxi.path, s: Taxi.s, v: Taxi.v }, drive = vmax => { const r = taxiDrive(T, dt, vmax); Taxi.s = T.s; Taxi.v = T.v; return r; };
   if (Taxi.st === 'come'){ if (drive(10)){ Taxi.st = 'wait'; Taxi.t = 0; taxiUi(); } else if (frameNo % 30 === 0) taxiUi(); }
   else if (Taxi.st === 'wait'){ const c = Taxi.car, dd = Math.hypot(me.pos.x - c.position.x, me.pos.z - c.position.z); if (Taxi.t < 0.1 && dd > 8) navTo('潮搭Go', c.position.x, c.position.z, 3);
     if (dd < (Taxi.t < 0.1 ? 8 : 4.5) && !myBoat && !Dive.on && F.phase === 'idle'){ let P = null; if (Taxi.atSlot){ P = taxiOutPath(Taxi.slot, Taxi.drop); Taxi.atSlot = false; } else { const L = taxiRouteFwd(c.position.x, c.position.z, c.rotation.y, Taxi.drop); P = L && taxiLane(L, [[c.position.x, c.position.z]]); } if (!P){ taxiSkip(); return; }
-      Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); Taxi.st = 'ride'; Taxi.path = P; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
+      Nav.t = null; if (mySeat && !mySeat.train) standUp(); poolMeVis(false); if (Taxi.pax && Taxi.pax.length) txEmit({ a: 'go', pax: Taxi.pax.slice(0, 3) }); Taxi.st = 'ride'; Taxi.path = P; Taxi.s = 0; Taxi.v = 0; Taxi.t = 0; SFX.click(); pushPresence(true); taxiUi(); }
     else if (Taxi.t > 90){ toast('阿萬等太久先回乘車處了，要坐再叫一次'); taxiEnd(true); } }
   else if (Taxi.st === 'ride'){ if (frameNo % 20 === 0) try { W2.warm(Taxi.car.position.x, Taxi.car.position.z); } catch(e){} if (drive(11)) taxiGetOff(); } }
 /* v963 紅綠燈：車子開到路口前面，燈不是綠的就停在停止線前（大道上往圓環開看大道的燈；圓環上快到路口看圓環的燈） */
@@ -20602,6 +20625,7 @@ function presenceObj(){
   try { if (SKI.on) o.sk = 1; else if (SKI.lift && SKI.lift.st === 'ride'){ o.sk = 2; o.st = 1; } } catch(e){}   /* v548 滑雪中／坐纜車（腳上有滑雪板） */
   if (Bike.on) o.bk = 1;
   if (taxiRiding()) o.cr = 1;   /* v962 坐潮搭Go：別人看到一台車 */
+  else if (paxRiding()) o.cr = 2;   /* v980 一起坐的人：藏在別人的車裡 */
   if (phoneMine()) o.ph = 1;   /* v581 正在滑手機（別人看到你拿手機） */   /* v438 在騎腳踏車 */
   { const g = Wardrobe.trying || rec.gear, gr = {}; for (const k in g) if (g[k] !== GEAR_DEFAULT[k]) gr[k] = g[k]; if (Object.keys(gr).length) o.gr = gr; }
   if (onIsle) o.is = onIsle.owner;
@@ -20706,7 +20730,8 @@ function updatePeers(dt, t){
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
     if (p.tr && W2 && W2.train){ const q = W2.train.seat(p.tr[0], p.tr[1]); if (q && Math.hypot(q.x - p.target.x, q.z - p.target.z) < 40){ f.pos.x = q.x; f.pos.z = q.z; f.baseY = q.y; f.rot = q.face; f.speed = 0; f.onTr = 1; } } else f.onTr = 0;   /* v923 坐小火車的人：直接放在我這邊同一班車的同一個位子（車的位置大家算出來一樣），不用等他一直傳位置過來 */
     { const same = (p.isle || null) === (onIsle ? onIsle.owner : null) && (p.inHouse || 0) === (House.on ? (House.it ? House.it.id : 1) + (House.floor || 0) * 1000 : 0) && !!p.diving === Dive.on && !p.sub && !poolHides(f.pos.x, f.pos.z); if (f.av.g.visible !== same){ f.av.g.visible = same; f.tag.style.display = same ? '' : 'none'; if (f.blob) f.blob.visible = same; } }
-    if (p.pres && p.pres.cr && W2 && W2.ride && W2.ride.car){ if (!f.carMesh) f.carMesh = taxiCar(); if (f.carMesh){ f.carMesh.position.set(f.pos.x, f.baseY, f.pos.z); f.carMesh.rotation.y = f.rot; taxiLookTick(f.carMesh); f.av.g.visible = false; if (f.blob) f.blob.visible = false; } } else if (f.carMesh){ scene.remove(f.carMesh); f.carMesh = null; }   /* v962 別人坐潮搭Go */
+    if (p.pres && p.pres.cr === 2){ f.av.g.visible = false; if (f.blob) f.blob.visible = false; if (f.carMesh){ scene.remove(f.carMesh); f.carMesh = null; } }
+    else if (p.pres && p.pres.cr && W2 && W2.ride && W2.ride.car){ if (!f.carMesh) f.carMesh = taxiCar(); if (f.carMesh){ f.carMesh.position.set(f.pos.x, f.baseY, f.pos.z); f.carMesh.rotation.y = f.rot; taxiLookTick(f.carMesh); f.av.g.visible = false; if (f.blob) f.blob.visible = false; } } else if (f.carMesh){ scene.remove(f.carMesh); f.carMesh = null; }   /* v962 別人坐潮搭Go */
     if (f.boatMesh){ f.boatMesh.position.set(f.pos.x, WATER_LEVEL + Math.sin(t * 1.6) * 0.04 + (WAVES.on ? waveH(f.pos.x, f.pos.z, now()) : 0), f.pos.z); f.boatMesh.rotation.y = f.rot; }   /* 別人的船也被同一圈浪晃 */
     f.dip = p.ph === 'bite' ? 3 + Math.sin(t*30)*0.15 : p.ph === 'reel' ? 0.5 + Math.sin(t*7)*0.2 : f.dip * Math.pow(0.05, dt);
     f.bend = p.ph === 'reel' ? 0.55 + Math.sin(t*5)*0.25 : f.bend * 0.9; f.tug = (f.tug || 0) + ((p.ph === 'reel' ? 0.7 + Math.sin(t * 2.3) * 0.25 : 0) - (f.tug || 0)) * Math.min(1, dt * 5);   /* v508 別人在拉魚／拉大魚：往後仰 */
@@ -20755,7 +20780,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {}); room.on('subbait', onSubBait, () => {}); room.on('orddone', onOrdDone, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -23546,7 +23571,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -24980,6 +25005,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u980', d:'11/28', items:[['👥','可以跟朋友一起坐潮搭Go 了：你叫車時，附近 25 公尺內的人會跳出「一起坐？」，按了就上同一台車（最多 3 個人），到了大家一起下車']] },
   { id:'u979', d:'11/28', items:[['👆','附近可以坐的位子、店門、板子頭上會浮一個小圖示：點哪個，人就自己走過去坐下、進門或打開，東西靠很近也不會按錯。碰一下搖桿就停']] },
   { id:'u978', d:'11/28', items:[['💬','村民講話會停久一點：字越多停越久，一句話至少留 3.5 秒才換下一句，來得及看完']] },
   { id:'u977', d:'11/28', items:[['📱','手機多了「潮搭Go」App：選一個地方就能叫車，很近的地方會帶你走過去；車子開過來、坐車中打開會看到現在的狀態'], ['⚡','跟伺服器講話的次數變少了（站著不動、手機切到背景時不一直送），玩的人多了也比較不會卡']] },

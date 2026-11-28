@@ -12,7 +12,7 @@
  "不合": "No match",
  "不咬": "No bite",
  "不熟": "Undercooked",
- "不用": "Not needed",
+ "不用": "No thanks",
  "不要": "Don't",
  "不錯": "Nice",
  "不限": "Any",
@@ -9509,7 +9509,7 @@
  "紅綠燈一輪 32 秒，每個人看到的燈號一樣。": "A traffic light cycle is 32 seconds, and everyone sees the same light.",
  "🚕 叫車": "🚕 Call a ride",
  "⚡ 直接到": "⚡ Go now",
- "不坐了": "Never mind",
+ "不坐了": "Cancel",
  "很近，走過去就到了": "It's close — just walk there",
  "阿萬等太久先走了，要坐再叫一次": "Asu waited too long and left. Call again if you need a ride",
  "🚕 阿萬開過來了，在「": "🚕 Asu is on the way — waiting at the \"",
@@ -9626,5 +9626,10 @@
  "村民講話會停久一點：字越多停越久，一句話至少留 3.5 秒才換下一句，來得及看完": "Villagers' speech bubbles now stay up longer: longer lines stay longer, and each line stays at least 3.5 seconds before the next one, so you have time to read",
  "附近可以坐的位子、店門、板子頭上會浮一個小圖示：點哪個，人就自己走過去坐下、進門或打開，東西靠很近也不會按錯。碰一下搖桿就停": "Nearby seats, shop doors and boards now show a small floating icon. Tap one and you'll walk over to sit, go in or open it, so things close together no longer get mixed up. Touch the joystick to stop",
  "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。": "Nearby seats, shop doors and boards show a small round icon above them. Tap one and you'll walk over to sit, go in or open it. Touch the joystick to stop. When you're right next to something, you can still use the big button at the bottom right.",
- "前面過不去，用搖桿走過去吧": "Something's in the way. Use the joystick to walk there"
+ "前面過不去，用搖桿走過去吧": "Something's in the way. Use the joystick to walk there",
+ "可以跟朋友一起坐潮搭Go 了：你叫車時，附近 25 公尺內的人會跳出「一起坐？」，按了就上同一台車（最多 3 個人），到了大家一起下車": "You can now ride TIDEGO with friends: when you call a ride, people within 25 m get a \"Ride together?\" prompt. If they accept, they join the same car (up to 3), and everyone gets off together",
+ "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。": "Ride TIDEGO with friends: when you call a ride, people within 25 m get a \"Ride together?\" prompt. Tap \"Ride together\" to join the same car (up to 3). Stay near the car; everyone boards when the caller gets in and gets off together at the destination.",
+ "👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。": "👥 Riding with friends: when you call a ride, people within 25 m get a \"Ride together?\" prompt. If they accept, they ride in your car (up to 3) and get off with you.",
+ "一起坐": "Ride together",
+ "離車子太遠，沒趕上這班車": "You were too far from the car and missed the ride"
 }

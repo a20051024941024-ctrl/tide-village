@@ -308,7 +308,7 @@
  "不得了！我在": "Gawat! Aku di",
  "不戴帽子": "Tanpa topi",
  "不熟": "Belum akrab",
- "不用": "Tidak perlu",
+ "不用": "Tidak usah",
  "不用魚餌": "Tanpa umpan",
  "不睡這張了": "Tidak tidur di sini lagi",
  "不知道誰放進鏡湖的，現在已經生了一大群。": "Entah siapa yang melepasnya ke Danau Cermin, sekarang sudah beranak banyak.",
@@ -9351,5 +9351,10 @@
  "村民講話會停久一點：字越多停越久，一句話至少留 3.5 秒才換下一句，來得及看完": "Gelembung bicara warga kini tampil lebih lama: kalimat panjang tampil lebih lama, dan setiap kalimat bertahan minimal 3,5 detik sebelum berganti, jadi sempat dibaca",
  "附近可以坐的位子、店門、板子頭上會浮一個小圖示：點哪個，人就自己走過去坐下、進門或打開，東西靠很近也不會按錯。碰一下搖桿就停": "Kursi, pintu toko, dan papan di dekatmu kini menampilkan ikon kecil melayang. Ketuk salah satunya dan kamu akan berjalan ke sana untuk duduk, masuk, atau membukanya, jadi benda yang berdekatan tidak tertukar lagi. Sentuh joystick untuk berhenti",
  "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。": "Kursi, pintu toko, dan papan di dekatmu menampilkan ikon bulat kecil di atasnya. Ketuk salah satunya dan kamu akan berjalan ke sana untuk duduk, masuk, atau membukanya. Sentuh joystick untuk berhenti. Saat berada tepat di sebelahnya, kamu tetap bisa memakai tombol besar di kanan bawah.",
- "前面過不去，用搖桿走過去吧": "Ada yang menghalangi. Pakai joystick untuk berjalan ke sana"
+ "前面過不去，用搖桿走過去吧": "Ada yang menghalangi. Pakai joystick untuk berjalan ke sana",
+ "可以跟朋友一起坐潮搭Go 了：你叫車時，附近 25 公尺內的人會跳出「一起坐？」，按了就上同一台車（最多 3 個人），到了大家一起下車": "Kini kamu bisa naik TIDEGO bersama teman: saat kamu memanggil mobil, orang dalam jarak 25 m mendapat ajakan \"Naik bareng?\". Kalau setuju, mereka ikut mobil yang sama (maksimal 3), dan semua turun bersama",
+ "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。": "Naik TIDEGO bersama teman: saat kamu memanggil mobil, orang dalam jarak 25 m mendapat ajakan \"Naik bareng?\". Ketuk \"Naik bareng\" untuk ikut mobil yang sama (maksimal 3). Tetap di dekat mobil; semua naik saat pemanggil naik dan turun bersama di tujuan.",
+ "👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。": "👥 Naik bersama teman: saat kamu memanggil mobil, orang dalam jarak 25 m mendapat ajakan \"Naik bareng?\". Kalau setuju, mereka ikut mobilmu (maksimal 3) dan turun bersamamu.",
+ "一起坐": "Naik bareng",
+ "離車子太遠，沒趕上這班車": "Kamu terlalu jauh dari mobil dan ketinggalan"
 }
