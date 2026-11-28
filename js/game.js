@@ -6294,7 +6294,8 @@ class Fisher {
   setName(n){ if (this.nm.textContent !== n) this.nm.textContent = n; }
   say(text, cls, secs){ const t = now(), L = String(text || '').length;
     if (this.isNpc){ if (!this.bub.hidden && this.bubAt && t - this.bubAt < 3.5 && this.bubUntil > t && text !== this.bub.textContent) return;   /* v978 作者：「NPC 講話太快，還沒看清楚就消失」→ 上一句至少留 3.5 秒才換下一句 */
-      secs = Math.min(14, Math.max(secs || 5, 3.5 + L * 0.28)); }   /* 字越多停越久：一個字大約 0.28 秒 */
+      secs = Math.min(14, Math.max(secs || 5, 3.5 + L * 0.28)); }
+    else if (!cls || cls === 'chatb') secs = Math.min(15, Math.max(secs || 5, 4.5 + L * 0.3));   /* v1004 玩家說的話也照字數停久一點，看得清楚 */   /* 字越多停越久：一個字大約 0.28 秒 */
     this.bub.className = 'bub' + (cls ? ' ' + cls : ''); this.bub.textContent = text; this.bub.hidden = false; this.bubAt = t; this.bubUntil = t + (secs || 5); }
   // 炫耀魚：把魚舉在頭上幾秒
   // 潛水：身體趴平、背氧氣瓶、戴面鏡
@@ -20671,6 +20672,17 @@ $('#chumBtn').addEventListener('click', e => { e.preventDefault(); e.stopPropaga
 
 /* ================= CHAT / TOASTS ================= */
 const logEl = $('#log');
+/* ===== v1004 聊天更好用（作者 11/28：「我以前也喜歡一直聊天而已」）=====
+   點別人頭上的話 → 跳一排表情（👍😂😮❤️👏），選了大家都會看到那個表情從他頭上冒出來；附近有人釣到稀有的魚，畫面跳「👏 好厲害」一鍵稱讚 */
+const RX_EM = ['👍', '😂', '😮', '❤️', '👏'];
+function rxEmit(d){ try { if (room && room.connected && room.connected()) room.emit('rx', d).catch(() => {}); } catch(e){} }
+function rxPop(f, e){ if (!f || !f.tag) return; const s0 = el('span', 'rxpop', e); f.tag.appendChild(s0); setTimeout(() => s0.remove(), 1800); }
+function rxSend(peer, e){ if (!RX_EM.includes(e)) return; const p = peers.get(peer); if (!p) return; rxPop(p.fisher, e); rxEmit({ to: peer, e }); SFX.click(); }
+function rxPick(peer, r){ let P = $('#rxPick'); if (P) P.remove(); if (!peer || Kid.on) return; P = el('div', 'rxpick panel'); P.id = 'rxPick'; for (const e of RX_EM){ const b = el('button', '', e); b.addEventListener('click', ev => { ev.stopPropagation(); rxSend(peer, e); P.remove(); }); P.appendChild(b); }
+  document.body.appendChild(P); const w = P.offsetWidth || 220; P.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px'; P.style.top = Math.max(8, r.top - 54) + 'px'; setTimeout(() => { const off = ev => { if (!P.contains(ev.target)){ P.remove(); removeEventListener('pointerdown', off, true); } }; addEventListener('pointerdown', off, true); }, 50); setTimeout(() => P.remove(), 6000); }
+function onRxMsg(m){ if (!m || m.sameTab || !m.data || isBlockedPeer(m.peer)) return; const d = m.data; if (!RX_EM.includes(d.e)) return; const mine = room && room.key;
+  const tf = d.to === mine ? me : (peers.get(d.to) || {}).fisher; if (!tf) return; rxPop(tf, d.e); if (d.to === mine){ const p = peers.get(m.peer); if (p) rxPop(p.fisher, '💬'); } }
+function praiseOffer(peer, name, f){ if (Kid.on) return; let b = $('#praiseBtn'); if (b) b.remove(); b = el('button', 'praisebtn panel', `👏 ${name} 釣到${f.name}！好厲害`); b.id = 'praiseBtn'; b.addEventListener('click', () => { rxSend(peer, '👏'); me.say('好厲害！', '', 3); b.remove(); }); document.body.appendChild(b); setTimeout(() => b.remove(), 8000); }
 function logMsg(name, text, sys, noHist){
   const d = document.createElement('div'); d.className = 'm' + (sys ? ' sys' : '');
   if (name){ const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
@@ -21085,7 +21097,7 @@ function useRoom(r){
       text = clean(text);
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '釣客';
       { const a = recentChat.get(msg.peer) || []; a.push(msg.data.t.slice(0, 120)); recentChat.set(msg.peer, a.slice(-5)); }
-      if (p) p.fisher.say(text); logMsg.dist = p ? Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) : 99; logMsg.peer = msg.peer; logMsg((nr ? '📍' : '') + name, text); logMsg.peer = null; SFX.chat();
+      if (p){ p.fisher.say(text, 'chatb'); p.fisher.peerKey = msg.peer; if (!p.fisher.bub.rxOn){ p.fisher.bub.rxOn = 1; p.fisher.bub.addEventListener('click', ev => { ev.stopPropagation(); if (p.fisher.bub.classList.contains('chatb')) rxPick(p.fisher.peerKey, p.fisher.bub.getBoundingClientRect()); }); } } logMsg.dist = p ? Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) : 99; logMsg.peer = msg.peer; logMsg((nr ? '📍' : '') + name, text); logMsg.peer = null; SFX.chat();
     }, () => {});
     room.on('cook', msg => {
       if (msg.sameTab || !msg.data || isBlockedPeer(msg.peer)) return; const rc = RECIPES[msg.data.r]; if (!rc) return; const q = clamp(Math.round(Number(msg.data.q) || 1), 1, 3);
@@ -21094,7 +21106,7 @@ function useRoom(r){
     }, () => {});
     room.on('tag', onTagMsg, () => {}); room.on('toy', toyOnMsg, () => {});
     room.on('subq', onSubQ, () => {}); room.on('subbait', onSubBait, () => {}); room.on('orddone', onOrdDone, () => {});
-    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('vc', onVcMsg, () => {}); room.on('bx', onBxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
+    room.on('pool', poolOnMsg, () => {}); room.on('tx', onTxMsg, () => {}); room.on('vc', onVcMsg, () => {}); room.on('rx', onRxMsg, () => {}); room.on('bx', onBxMsg, () => {}); room.on('fb', fbOnMsg, () => {}); room.on('bk', bkOnMsg, () => {}); room.on('bd', bdOnMsg, () => {}); room.on('race', raceOnMsg, () => {});
     room.on('duel', duelOnMsg, () => {});   /* v502 釣魚對決：邀請、回應、對手釣到魚 */   /* v497 撞球：出桿、球的位置、輪到誰 */
     room.on('isleup', m => { const o = m && m.data && m.data.owner; if (!o || m.sameTab || !onIsle || onIsle.owner !== o) return; isleRefresh(o); }, () => {});
     room.on('hinv', m => { if (m && m.data && m.data.to === myIdOrMe()) loadHome(); }, () => {});   /* v245 被邀請的人如果在同一個大廳，馬上收到 */
@@ -21119,7 +21131,7 @@ function useRoom(r){
       const p = peers.get(msg.peer); const name = p ? peerName(p) : '有人';
       if (f.rs){ setTimeout(rsPoll, 1500); }   /* 紅鯊的公告由伺服器紀錄發（每個大廳都看得到，不會重複） */
       else if (f.sev){ ticker(`🎉 <b>${esc(name)}</b> 釣到了阿忠今天放的 <b>${esc(f.name)}</b> ${fmtKg(w)}！全伺服器只有這一隻`); if (Sev.ev && Sev.ev.fish === f.id){ Sev.ev.caught = name; Sev.told['got' + Sev.ev.id] = 1; } }
-      if (f.rarity !== '常見' && p && p.fisher) npcCheerAt(p.fisher.pos.x, p.fisher.pos.z);
+      if (f.rarity !== '常見' && p && p.fisher){ npcCheerAt(p.fisher.pos.x, p.fisher.pos.z); if (Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < 40) praiseOffer(msg.peer, name, f); }
       if (f.rarity === '傳說' && !f.rs && p && p.fisher){ legendPillar(p.fisher.pos.x, p.fisher.pos.z); const d = Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z); if (d < 400) flash(`✨ ${name} 釣到傳說魚了！看那道光`, 2.2); }
       if (f.rarity !== '常見' && !f.rs) Talk.recent.unshift({ who: name, name: f.name, at: Date.now() });
       { const uid = peerUid.get(msg.peer); if (uid && p && Array.isArray(Fr.list) && Fr.list.some(x => x.id === uid) && (f.rarity !== '常見' || f.of || msg.data.b)) frNotice(name, f, w, !!msg.data.b, msg.peer); }   /* v831 朋友釣到好東西：跳一張卡，可以直接過去看 */
@@ -23911,7 +23923,7 @@ function renderTab0(){
         ["要先釣過 10 條魚才能領紅包、禮物和玩小遊戲。", "夜市一次 30 金幣，每天最多贏 600。一次撈到 8 分送金魚缸。", "萬聖節 10/29～10/31，聖誕節 12/20～12/26，春節從除夕起 7 天。"]],
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
-      ["村子怎麼走", "home", ["掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後按著「🎤 按著說話」講話，放開就停。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
+      ["村子怎麼走", "home", ["聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
       ["其他的島", "home", ["找港口的阿海坐船，或自己划船去。去過以後地圖可以直接傳送。", "苔森之島：很大的森林島，湖、溪、海邊都能釣。", "珊瑚礁群島：往西走過跨海大橋。礁岩用磯釣竿最好。島東邊的石滬退潮時魚被困在裡面，咬得很快。", "百年生態池：在村子東邊，用手竿。", "紅樹林：在本島南岸。漲潮在碼頭釣；退潮泥灘露出來，可以走下去抓彈塗魚和招潮蟹，要慢慢靠近。", "冰封群島南邊有滑雪場。", "海上有航道浮標，照著划就到。中間有八個地標，靠近會記下來。"],
         ["阿海的船要坐 9 到 22 秒，可以按「跳過」。", "八個地標都找到有成就「航海家」。"]],
@@ -25357,6 +25369,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1004', d:'11/28', items:[['💬','大家說的話在頭上停久一點，字多的停更久'], ['👍','點一下別人頭上的話，可以回表情（👍😂😮❤️👏），從他頭上冒出來，大家都看得到'], ['👏','附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手']] },
   { id:'u1003', d:'11/28', items:[['💬','掛著釣的時候，下面的聊天列和聊天紀錄會一直顯示，可以邊釣邊聊'], ['🎣','有釣組的話：竿子插在竿架上、開掛著釣，人可以走開，常見的魚竿架自己收；稀有的魚還是響鈴叫你回去'], ['🪑','坐在釣組的椅子上掛著釣，魚會比較快上鉤']] },
   { id:'u1002', d:'11/28', items:[['🛋️','掛著釣：甩竿後右邊會出現「掛著釣」，打開後常見的魚會自己拉上來、自己再甩一竿，雙手可以拿去聊天'], ['🔔','掛著釣時稀有、傳說的魚咬了會響鈴叫你，要自己拉；走開就自動停'], ['👏','村民不會莫名其妙歡呼了：附近有人釣到稀有、傳說的魚，旁邊的村民才拍手']] },
   { id:'u1001', d:'11/28', items:[['🎏','港口熱鬧起來了：每條棧橋口立旗桿，中間掛彩色小旗，被風吹著一直晃'], ['🪗','魚市場門口多了街頭樂手風琴伯，一直拉手風琴、頭上冒音符'], ['👋','港口一帶的村民會不時揮手、歡呼']] },

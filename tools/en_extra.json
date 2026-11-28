@@ -980,7 +980,7 @@
  "天前上線": " days ago",
  "天氣變成": "Weather changed to",
  "天黑了，": "It's dark,",
- "好厲害！": "Amazing!",
+ "好厲害！": "Nice one!",
  "好友代碼": "Friend code",
  "好可愛！": "So cute!",
  "存到手機": "Save to phone",
@@ -9881,5 +9881,10 @@
  "這裡不能掛著釣，先站到水邊甩一竿": "Can't idle fish here; stand by the water and cast first",
  "掛著釣的時候，下面的聊天列和聊天紀錄會一直顯示，可以邊釣邊聊": "While idle fishing, the chat bar and chat history stay on screen so you can fish and chat",
  "有釣組的話：竿子插在竿架上、開掛著釣，人可以走開，常見的魚竿架自己收；稀有的魚還是響鈴叫你回去": "With a fishing set: put the rod in the holder and turn on idle fishing, then you can walk away; common fish are reeled in by the holder, and a bell still calls you back for rare ones",
- "坐在釣組的椅子上掛著釣，魚會比較快上鉤": "Idle fishing while sitting in the fishing set's chair makes fish bite a little faster"
+ "坐在釣組的椅子上掛著釣，魚會比較快上鉤": "Idle fishing while sitting in the fishing set's chair makes fish bite a little faster",
+ "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。": "Chat: what others say stays above their heads a bit longer. Tap someone's speech bubble to react with an emoji (👍😂😮❤️👏) that everyone can see. When someone nearby catches a rare fish, a \"👏 Nice!\" button pops up — tap it to cheer them on.",
+ "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。": "Friend voice chat: Friends tab → tap 📞 next to an online friend. Once connected just talk; tap \"🎤 Mic on\" to mute, tap again to unmute. Don't want calls? Turn off \"Friend voice\" at the top of the Friends tab.",
+ "大家說的話在頭上停久一點，字多的停更久": "Chat bubbles stay above heads longer — longer messages stay even longer",
+ "點一下別人頭上的話，可以回表情（👍😂😮❤️👏），從他頭上冒出來，大家都看得到": "Tap someone's speech bubble to react (👍😂😮❤️👏) — it pops out above their head for everyone to see",
+ "附近有人釣到稀有、傳說的魚，畫面跳「👏 好厲害」，點一下就幫他拍手": "When someone nearby lands a rare or legendary fish, a \"👏 Nice!\" button pops up — tap to cheer"
 }
