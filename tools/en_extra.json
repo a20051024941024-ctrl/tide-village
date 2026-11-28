@@ -10060,5 +10060,12 @@
  "停在棧橋中間的船放在正中間，阿默拋竿不會拋到船上": "Boats moored between piers now sit in the middle, so Amo no longer casts onto them",
  "小島商店的房子和方塊都有小圖了（以前房子只有符號、方塊是空的）": "House and block lists in the island shop now have thumbnails (houses used to show only symbols and blocks were blank)",
  "釣具店牆上的旗魚擺正，平平地掛在一塊木板前": "The marlin on the tackle shop wall now hangs level in front of a wooden plaque",
- "村民走去市場、食堂的路上會把釣竿收起來": "Villagers put their rods away while walking to the market or diner"
+ "村民走去市場、食堂的路上會把釣竿收起來": "Villagers put their rods away while walking to the market or diner",
+ "竿子插在竿架上走開時，魚咬了會響鈴，要在 15 秒內跑回來自己拉，竿架不再自己收魚": "When your rod is in the holder and you walk away, a bite rings the bell — run back within 15 seconds to reel it in yourself; the holder no longer lands fish on its own",
+ "跑船生意拿掉了：阿嬤不收魚了，船上還有魚的話，魚缸那裡可以拿去賣掉": "Cargo runs are gone: Grandma no longer buys fish; if you still have fish on the boat, you can sell them from the tank page",
+ "🔔 魚來了！快跑回竿架拉魚": "🔔 A fish is biting! Run back to the rod holder",
+ "魚吃掉餌跑了…（鈴鐺響的時候要在 15 秒內跑回來拉）": "The fish ate the bait and left… (run back within 15 seconds when the bell rings)",
+ "森林裡的溪水好清，魚也肥": "The forest streams are so clear, and the fish are fat",
+ "年紀大了，在這裡曬曬太陽就好": "At my age, sunbathing here is enough",
+ "阿嬤搬到苔森之島了，就在碼頭上岸的地方曬太陽": "Grandma moved to Mossy Isle — she's sunbathing by the pier"
 }

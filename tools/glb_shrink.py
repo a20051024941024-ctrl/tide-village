@@ -14,6 +14,8 @@ T = pinv[T0]; CU = UV0[T0]   # 三角形每個角的貼圖座標
 ok = (T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2]) & (T[:, 0] != T[:, 2]); T = T[ok]; CU = CU[ok]
 E0 = np.sort(np.concatenate([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]]), 1); ue, ec = np.unique(E0, axis=0, return_counts=True)
 lock = np.zeros(nV, bool); lock[ue[ec != 2].ravel()] = True   # 開放的邊、非流形的邊上的點不動
+if '--seam' in sys.argv:   # 貼圖接縫上的點（同一個位置有兩個以上貼圖座標）也不動：不然會拉出一塊跨到別的貼圖的三角形，看起來是一點一點的雜色
+    ck = np.unique(np.concatenate([T.reshape(-1, 1), np.round(CU.reshape(-1, 2) * 2**16).astype(np.int64)], 1), axis=0); cnt = np.bincount(ck[:, 0], minlength=nV); lock |= cnt > 1
 print('welded verts', nV, 'tris', len(T), 'locked', int(lock.sum()), flush=True)
 v0, v1, v2 = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]; n = np.cross(v1 - v0, v2 - v0); ar = np.linalg.norm(n, axis=1); n = n / np.maximum(ar, 1e-15)[:, None]; d = -(n * v0).sum(1)
 pl = np.concatenate([n, d[:, None]], 1); K = pl[:, :, None] * pl[:, None, :] * ar[:, None, None]; Q = np.zeros((nV, 4, 4))

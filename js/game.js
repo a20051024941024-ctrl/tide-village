@@ -8061,6 +8061,7 @@ function autoFishUi(){ const show = AutoF.on || (F.phase !== 'idle' && F.phase !
 function autoEscP(){ const h = rec.hook, b = h === 'hk_gold' ? 0.08 : (h === 'hk_circle' || h === 'hk_forge') ? 0.13 : h === 'hk_barb' ? 0.18 : 0.25; return b + (rodDur(rec.rod) <= 0 ? 0.1 : 0); }
 function autoFishTick(dt, t){ if (frameNo % 10 === 0) autoFishUi(); if (!AutoF.on) return;
   if (Dive.on){ AutoF.on = false; return; }
+  if (F.held) return;   /* v1019 竿子插在竿架上：魚來了響鈴，要自己跑回來拉（不再自動收） */
   if (!AutoF.at || F.phase === 'waiting' || F.held) AutoF.at = [me.pos.x, me.pos.z]; if (!F.held && (Math.hypot(me.pos.x - AutoF.at[0], me.pos.z - AutoF.at[1]) > 1.5 || Math.abs(joy.x) + Math.abs(joy.z) > 0.2)){ AutoF.on = false; AutoF.at = null; autoFishUi(); toast('走開了，掛著釣先停'); return; }
   const easy = f => f && f.rarity === '常見' && !f.rs && !f.sev && !BIG_FISH.has(f.id);
   if (F.phase === 'bite' && F.fish){ if (easy(F.fish)){ if (t - F.biteAt > 0.25){ actionDown(); AutoF.p0 = 0; AutoF.t0 = t; AutoF.esc = Math.random() < autoEscP(); AutoF.escAt = 0.7 + Math.random() * 1.2; setTimeout(() => { try { if (F.phase === 'reeling') F.hold = false; } catch(e){} }, 120); } }
@@ -17086,7 +17087,7 @@ function renderFerry(body){
     for (const [id, ic, nm, ds] of [['wilddock', '🏝️', '遠方荒島・漂流島（求生）', '東南外海一座沒有人住的大島，什麼都要自己來：撿材料、做竹竿、生火、蓋遮雨棚和小木屋。島上會餓、會累，天黑要烤火、下雨要躲雨。有沙灘、竹林、小山、岩岸潮池，還有一艘破船'], ['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ if (CUT_DOCK.has(id)) continue; const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
       const gl = lvGate(id), a = el('div', 'tacts'), b = el('button', 'tbtn' + (gl ? ' ghost' : ''), gl ? `🔒 Lv.${gl}` : '載我去'); b.addEventListener('click', () => { if (gl){ toast(`要到 Lv.${gl} 阿海才會載你去那裡`); return; } closeSheet(); voyStart(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
-    if (W2S.on){ for (const [id, ic, nm, ds] of [['greendock', '🧺', '苔森之島・阿嬤', '阿嬤搬到苔森之島了，就在碼頭上岸的地方擺攤收魚。跑船生意：新主島的魚載去給阿嬤收，多三成']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
+    if (W2S.on){ for (const [id, ic, nm, ds] of [['greendock', '🧺', '苔森之島・阿嬤', '阿嬤搬到苔森之島了，就在碼頭上岸的地方曬太陽']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
         const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); if (id === 'harborsq') W2S.home = false; const tp = TRAVEL.find(t => t.id === id); if (tp) travelTo(tp); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } }   /* v933 新主島預覽：阿海也載你去阿嬤那裡、回舊村子 */
     body.appendChild(ul); }
   { body.appendChild(el('div', 'dexhead', `🤿 潛水（進階）${hasDive('dive_suit') ? `・氧氣 ${diveO2()} 秒` : ''}`)); const ul = el('ul', 'shoplist');
@@ -19300,7 +19301,7 @@ function nearShop(){
   if (!onIsle && !House.on && Ord.g && Math.hypot(me.pos.x - ORDB.x, me.pos.z - ORDB.z) < 3.2){ const n = ordReadyN(); return { id:'orders', label:'📋 訂單板', sub: n ? `${n} 張可以交貨` : Ord.d && ordLeft() > 0 && ordOpenN() ? `${ordOpenN()} 張還沒交` : '', mode:'orders' }; }
   if (nearBB()) return { id:'bb', label:'潮汐大看板', sub:'📺 全螢幕看', mode:'bb' };
   if (!onIsle && !House.on && Team.g && Math.hypot(me.pos.x - TBOARD.x, me.pos.z - TBOARD.z) < 3.4) return { id:'tboard', label:'🏆 村子大看板', mode:'tboard' };
-  if (!onIsle && !House.on && !myBoat && Math.hypot(me.pos.x - CARGO_AT.reef.x, me.pos.z - CARGO_AT.reef.z) < 3.2) return { id:'cargo', label:'阿嬤・收魚', mode:'cargo' };
+  /* v1019 作者：「跑船生意我也覺得先拿掉」→ 阿嬤不收魚了 */
   { const g = npcs.find(n => n.shopNpc === 'news'); if (g && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'news', label:'阿報・村報', mode:'news' }; }
   { const g = npcs.find(n => n.shopNpc === 'sci'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'sci', label:'蔚博士', mode:'sci' }; }
   { const g = npcs.find(n => n.wid === 'gang'); if (g && !g.wHide && Math.hypot(me.pos.x - g.pos.x, me.pos.z - g.pos.z) < 2.3) return { id:'gang', label:'老港・漁夫', mode:'gang' }; }
@@ -20074,10 +20075,11 @@ function fkAutoCatch(t){ if (!AutoF.on) return false; const f = F.roll && F.roll
   if (Cloud.on && F.rollArgs){ const id = F.castId = (F.castId || 0) + 1, args = F.rollArgs; F.roll = 'pending'; F.rollWait = 0; F.hookTry = 0; cloudCall('roll_fish', args).then(row => { if (F.castId !== id) return; F.roll = row ? 'cast' : 'fail'; F.castAt = now(); F.hookReq = 0; }); }
   else if (!Cloud.on && F.spot){ F.roll = null; F.pre = pickFish(F.spot, F.rollC || 0.5); }
   F.waitUntil = now() + biteWait(F.rollC || 0.5) * 0.85; return true; }
-function fkHeldBite(t){ if (!F.heldRing && fkAutoCatch(t)) return; if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('竿架的鈴鐺響了！快回去坐下拉魚', 2); FK.ringAt = t; }
+function fkHeldBite(t){   /* v1019 作者：「應該是魚來了，我從附近跑過來都還拉得到，不要這樣無腦釣魚，不然就變掛機遊戲了」→ 竿架不再自己收魚：鈴響了要自己跑回來拉 */
+  if (!F.heldRing){ F.heldRing = t; fkBell(); try { buzz([60, 60, 60]); } catch(e){} flash('🔔 魚來了！快跑回竿架拉魚', 2.2); FK.ringAt = t; }
   if (t - FK.ringAt > 1.6){ FK.ringAt = t; fkBell(); }
   fkRing(t); F.waitUntil = t + 0.3;
-  if (t - F.heldRing > 25){ cancelFishing(); flash('魚吃掉餌跑了…（鈴鐺響的時候要回去坐下）', 2); } }
+  if (t - F.heldRing > 15){ cancelFishing(); flash('魚吃掉餌跑了…（鈴鐺響的時候要在 15 秒內跑回來拉）', 2); } }
 /* 別人的裝備（presence 的 fk：[x, z, 方向, 地面高, 有哪些, 釣台高, 魚護裡的魚…]） */
 function fkPeer(p, pr){ const f = p.fisher, a = Array.isArray(pr.fk) ? pr.fk : null;
   const ok = a && a.length >= 6 && a.slice(0, 6).every(v => Number.isFinite(+v)) && Math.hypot(+a[0] - p.target.x, +a[1] - p.target.z) < 16 && (+a[4] | 0) >= 1 && (+a[4] | 0) <= 15;
@@ -20166,7 +20168,7 @@ function renderShop(body){
     if (Cloud.on && (!ECON.at || Date.now() - ECON.at > 5 * 60000)) loadEcon();
     { const E = Object.entries(ECON.m || {}).filter(([id]) => FISH_BY_ID[id] && !FISH_BY_ID[id].of).sort((a, b) => b[1].m - a[1].m); if (Cloud.on && E.length){ const hi = E.filter(e => e[1].m >= 1.08).slice(0, 3), lo = E.filter(e => e[1].m <= 0.92).slice(-3);
       const box = el('p', 'sub'); box.textContent = `「今天${hi.length ? hi.map(([id]) => FISH_BY_ID[id].name).join('、') + '比較少，收得比較貴' : '大部分的魚價錢都正常'}${lo.length ? `；${lo.map(([id]) => FISH_BY_ID[id].name).join('、')}最近太多人賣，便宜一點` : ''}。」村民釣的魚也會賣給商店，食堂每小時會用掉一些。`; body.appendChild(box); } }
-    if (Cloud.on){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', W2S.on ? '🚢 跑船生意：裝上船載去苔森之島給阿嬤（多三成）' : '🚢 跑船生意：裝上船載去珊瑚礁島賣（多三成）'); b.addEventListener('click', () => { openSheet('cargo'); loadCargo(); }); r.appendChild(b); body.appendChild(r); }
+    if (Cloud.on && !Cargo.info) loadCargo(); if (Cloud.on && Cargo.info && Cargo.info.cargo && Cargo.info.cargo.length){ const r = el('div', 'tmrow'), b = el('button', 'tbtn', `🚢 船上還有 ${Cargo.info.cargo.length} 條魚，拿去賣掉`);   /* v1019 跑船生意拿掉了，船上剩下的魚還是可以賣 */ b.addEventListener('click', () => { openSheet('cargo'); loadCargo(); }); r.appendChild(b); body.appendChild(r); }
     const locked = new Set(rec.show || []);
     const favN = rec.tank.filter(x => x.k).length, list = rec.tank.filter(x => !locked.has(x.t) && !FISH_BY_ID[x.f].rs && !x.k).sort((a, b) => fishPrice(FISH_BY_ID[b.f], b.w) - fishPrice(FISH_BY_ID[a.f], a.w));
     body.appendChild(el('p', 'sub', `「越重越值錢。」${favN ? `收藏⭐的 ${favN} 條不會出現在這裡，也不會被賣掉。` : '想留下來的魚，在魚缸按 ☆ 收藏就不會被賣掉。'}${locked.size ? `水族館展示中的 ${locked.size} 條在最下面，也可以直接賣（會自動從水族館拿出來）。` : ''}`));
@@ -22201,7 +22203,7 @@ const CARGO_AT = { reef: { x: 9.6, z: 83.6, r: 6, name: '珊瑚礁島・阿嬤' 
 const Cargo = { info: null, at: 0, busy: false, sure: 0 };
 /* v952 阿嬤搬到苔森之島（作者 11/27：「阿嬤搬過去某個外島」→ 22:2x 選苔森之島）：人在新主島（W2S.on）時，阿嬤站在苔森之島碼頭上岸的地方，旁邊一個收魚的小攤；
    跑船生意的另一頭（CARGO_AT.reef）跟著搬過去。伺服器只認「reef」這個代號、不看座標，所以不用改 SQL。回舊村子一切照舊 */
-const GRAN = { x: 143.2, z: 111, face: -Math.PI / 2 - 0.5, g: null, col: null, flag: null, lines: ['我從珊瑚礁島搬來苔森之島了，這裡的樹好香', '新主島的魚載來給我，我多給三成', '跑船要趁新鮮，放久了就不值錢', '森林裡的溪魚，我也收喔', '坐阿海的船，說要找阿嬤就到了'] };
+const GRAN = { x: 143.2, z: 111, face: -Math.PI / 2 - 0.5, g: null, col: null, flag: null, lines: ['我從珊瑚礁島搬來苔森之島了，這裡的樹好香', '森林裡的溪水好清，魚也肥', '年紀大了，在這裡曬曬太陽就好', '坐阿海的船，說要找阿嬤就到了'] };
 function granStall(on){ if (on && !GRAN.g){ const g = new THREE.Group(), y0 = groundHeight(GRAN.x + 1.3, GRAN.z), L = (c, r) => new THREE.MeshLambertMaterial({ color: c }), bx = (w, h, d, m, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; g.add(b); return b; };
     g.position.set(GRAN.x + 1.3, y0, GRAN.z); scene.add(g); const wood = L('#a8774a'), woodD = L('#7a5530');
     bx(0.8, 0.9, 2.4, wood, 0, 0.45, 0); bx(0.9, 0.06, 2.5, woodD, 0, 0.92, 0);   /* 櫃台 */
@@ -22216,8 +22218,8 @@ function granTick(t){ if (GRAN.flag && GRAN.g.visible && Math.hypot(me.pos.x - G
 function granMove(on){ const n = npcs.find(q => q.npcName.startsWith('阿嬤')); if (!W2S.gv) W2S.gv = { x: CARGO_AT.reef.x, z: CARGO_AT.reef.z, name: CARGO_AT.reef.name };
   CARGO_AT.reef.x = on ? GRAN.x : W2S.gv.x; CARGO_AT.reef.z = on ? GRAN.z : W2S.gv.z; CARGO_AT.reef.name = on ? '苔森之島・阿嬤' : W2S.gv.name;
   if (n){ if (!n.gv) n.gv = { x: n.pos.x, z: n.pos.z, y: n.baseY, rot: n.rot, lines: n.lines, name: n.npcName, bob: n.bobPos.clone() }; n.w2on = on;
-    if (on){ w2NpcPut(n, GRAN.x, GRAN.z, GRAN.face, false, null); n.roam = 0; n.lines = GRAN.lines; n.setName('阿嬤・收魚'); } else { w2NpcPut(n, n.gv.x, n.gv.z, n.gv.rot, true, n.gv.bob, n.gv.y); n.lines = n.gv.lines; n.setName(n.gv.name); } }   /* roam = 0：在攤子前面站著，不亂走 */
-  granStall(on); }
+    if (on){ w2NpcPut(n, GRAN.x, GRAN.z, GRAN.face, false, null); n.roam = 0; n.lines = GRAN.lines; n.setName('阿嬤'); } else { w2NpcPut(n, n.gv.x, n.gv.z, n.gv.rot, true, n.gv.bob, n.gv.y); n.lines = n.gv.lines; n.setName(n.gv.name); } }   /* roam = 0：在攤子前面站著，不亂走 */
+  granStall(false); }   /* v1019 收魚的攤子收起來了 */
 
 function cargoPlace(){ if (onIsle || House.on || Dive.on) return null; for (const k in CARGO_AT){ const P = CARGO_AT[k]; if (Math.hypot(me.pos.x - P.x, me.pos.z - P.z) < P.r) return k; } return null; }
 async function loadCargo(){ if (!Cloud.on || !Cloud.sb || Cargo.busy) return; Cargo.at = Date.now(); const r = await festRpc('cargo_info'); if (r && r.cargo){ Cargo.info = r; if (!$('#sheet').hidden && curTab === 'cargo') renderTab(); } }
@@ -24217,7 +24219,7 @@ function renderTab0(){
       ["配種", "home", ["每條魚有公母。", "魚缸的「配種缸」可以挑同一種的一公一母，一缸一天配一次。", "魚苗的顏色、花紋、鰭從爸媽各拿一半，隔天長大才看得出來。", "看起來普通的魚也可能帶著特別的基因。", "水溫、飼料、水草會讓某些特徵比較容易出現，只是機率多一點。", "兄弟姊妹互配，體型會變小。", "變種也會遺傳：兩條變種生變種；變種配一般的，小魚看起來一般但帶著基因。"],
         ["一次生 1～3 條。每條 5% 機會突變，0.5% 機會稀有突變（白化、金鱗、黑化、夜光、寶石眼）。", "能配的有 13 種。有基因的魚最多養 60 條，配種缸可以用金幣加到 4 缸。", "變種帶基因的配變種，一半是變種；兩條帶基因的配，四分之一是變種。", "春夏是野外繁殖季。含著小魚的母吳郭魚放流多 5 愛海點數。"]],
       ["買東西、賣魚", "home", ["潮汐魚市場在港邊廣場，裡面三個櫃位：賣魚、阿福海產、釣客擺攤。", "魚越稀有、越重越值錢。", "釣具店賣釣竿、魚餌、窩料、工具。", "衣服可以先試穿再買，大家都看得到你穿什麼。", "阿萍的美髮沙龍在阿綾服裝店對面，剪了染了就是你的。", "造型頁最下面可以自己畫衣服，還能放到設計師市集賣。", "魚市場的「跑船生意」：把魚載到別的地方賣比較貴。"],
-        ["跑船：一次最多 10 條。村子的魚載去珊瑚礁島、礁島的魚載回村子，都多三成。裝船 5 分鐘內最新鮮，之後每分鐘少 4%，最低剩一半。要過 45 秒才能賣。", "阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
+        ["阿萍：新髮色 200 金幣，新髮型 400。", "自己畫的衣服是 32×32 格、48 色。別人買了你拿九成。被檢舉三次會下架。"]],
       ["訂單板", "home", ["港邊廣場西北角有一面訂單板，村子裡的人把要的東西貼在上面。", "每 4 小時換一批，一批 4 張：兩張小單、一張中單、一張大單。", "要的東西有魚、料理、材料、菜。湊齊了走到板子前面按「交貨」。", "交貨比直接賣掉多賺，還有經驗和「村子貢獻」。", "菜要先在島上的田收成：金幣照拿，另外留一顆在背包的菜籃。", "釣到訂單要的魚，卡片上會寫「訂單要的」。"],
         ["換單時間是台灣時間 0、4、8、12、16、20 點，全伺服器看到的單子都一樣。", "收藏⭐的、放在我的海展示的、取了名字的魚不會被拿去交。", "小單貢獻 1、中單 2、大單 4。全村的貢獻會加在一起，之後村子要添新東西時會用到。", "菜籃每種菜最多放 99 顆。"]],
       ["人物造型", "home", ["手機的「造型」可以換臉、頭髮、衣服、褲子、鞋子。", "眼睛、眉毛、嘴巴、腮紅分開挑，眼睛可以換顏色。", "髮型十四種：長捲髮、刺刺短髮、清爽短髮、側馬尾、雙馬尾、鮑伯短髮、小馬尾、包包頭、平頭、西瓜頭、中分短髮、捲捲短髮、雙麻花辮、長直髮。", "還能戴帽子、口罩、耳環。", "不能自己調色，每件衣服有幾款設計款（配好的顏色和圖案），各自要買；⚓ 是老港每週的限定款，只有老港賣。", "做表情動作時臉也會跟著變。魚跑掉會哭，被旁邊的人拍手會害羞。", "表情選單裡有價錢的是新動作，買了永遠能用。", "你換的造型別人都看得到。"],
@@ -25680,6 +25682,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1020', d:'11/29', items:[['🔔','竿子插在竿架上走開時，魚咬了會響鈴，要在 15 秒內跑回來自己拉，竿架不再自己收魚'], ['🧺','跑船生意拿掉了：阿嬤不收魚了，船上還有魚的話，魚缸那裡可以拿去賣掉']] },
   { id:'u1019', d:'11/29', items:[['🏝️','小島商店的房子和方塊都有小圖了（以前房子只有符號、方塊是空的）'], ['🐟','釣具店牆上的旗魚擺正，平平地掛在一塊木板前'], ['🎣','村民走去市場、食堂的路上會把釣竿收起來'], ['🪑','長椅上的位子隔開一點，兩個人坐隔壁不會擠在一起'], ['🚕','一起坐車改成叫車的人點名邀請：車子來的時候，叫車的人旁邊會出現「👥 邀 某某」，被邀的人才會看到「一起坐」'], ['🏛️','村公所改小一點、往東挪，前面不壓路、後面不壓鐵軌'], ['💬','村民講話停久一點：每句至少 6 秒，字多就更久'], ['🎣','停在棧橋中間的船放在正中間，阿默拋竿不會拋到船上'], ['🧑','好友列表顯示每個人自己的新人物大頭照（沒在線上的也看得到；對方要更新遊戲後進來一次）'], ['⛵','港口外面繞圈開的漁船改走外海那一圈，不會再穿過碼頭']] },
   { id:'u1018', d:'11/29', items:[['🌸','聯名活動週：阿穎週 → 阿默週 → 阿萬週輪流，每週日換。這週釣到 20 條名牌框、40 條眼睛顏色、80 條聯名釣竿（甩竿有特效）、150 條整套衣服（手機 → 活動）'], ['👕','聯名套裝不再用金幣買，要參加活動週才拿得到；已經買的人照樣是你的'], ['🎪','節慶收進「活動」裡，手機少一個圖示']] },
   { id:'u1017', d:'11/29', items:[['🌸','阿穎・櫻浪外套不再偏紫，是真的粉紅色'], ['👁️','眼睛顏色不再自己調，之後由活動送；已經選好的顏色照舊']] },
