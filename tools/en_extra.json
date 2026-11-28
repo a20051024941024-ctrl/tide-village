@@ -9986,5 +9986,11 @@
  "買望遠鏡看遠方": "Buy binoculars and look far away",
  "海豚、鯨魚、流星…看到就記進筆記": "Dolphins, whales, shooting stars… everything you spot goes in your notebook",
  "去潮汐娛樂館": "Visit the Tide Arcade",
- "釣蝦、打撞球": "Shrimp fishing and billiards"
+ "釣蝦、打撞球": "Shrimp fishing and billiards",
+ "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。掛著釣偶爾會脫鉤跑掉：沒裝鉤子大約 4 條跑 1 條，阿鐵做的鉤子越好越少跑（金鉤大約 12 條跑 1 條），釣竿磨損完會跑更多。": "Idle fishing: after casting, tap \"🛋️ Idle fishing\" on the right. Common fish reel themselves in and you recast automatically; rare fish ring a bell for you. Walking away stops it. Fish sometimes slip the hook while idle: about 1 in 4 with no hook equipped, fewer with better hooks from A-Tie (about 1 in 12 with the gold hook), and more if your rod is worn out.",
+ "掛著釣不再每條都中：常見的魚也會脫鉤跑掉，沒裝鉤子大約 4 條跑 1 條": "Idle fishing no longer lands every fish: common fish can slip the hook too — about 1 in 4 with no hook equipped",
+ "阿鐵做的鉤子越好越少跑：倒刺鉤 18%、圓形鉤和鍛造重鉤 13%、金鉤 8%；釣竿磨損完多跑 10%": "Better hooks from A-Tie lose fewer: barbed 18%, circle and forged 13%, gold 8%; a worn-out rod adds 10%",
+ "自己拉魚照舊，不受影響": "Reeling by hand is unchanged",
+ "魚脫鉤跑掉了…": "The fish slipped off the hook…",
+ "竿架那邊的魚脫鉤跑掉了": "The fish on the rod holder slipped off"
 }
