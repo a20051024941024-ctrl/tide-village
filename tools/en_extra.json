@@ -9631,5 +9631,21 @@
  "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。": "Ride TIDEGO with friends: when you call a ride, people within 25 m get a \"Ride together?\" prompt. Tap \"Ride together\" to join the same car (up to 3). Stay near the car; everyone boards when the caller gets in and gets off together at the destination.",
  "👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。": "👥 Riding with friends: when you call a ride, people within 25 m get a \"Ride together?\" prompt. If they accept, they ride in your car (up to 3) and get off with you.",
  "一起坐": "Ride together",
- "離車子太遠，沒趕上這班車": "You were too far from the car and missed the ride"
+ "離車子太遠，沒趕上這班車": "You were too far from the car and missed the ride",
+ "港口西邊棧橋口開了「潮汐船行」：可以買單人獨木舟、雙人划艇、四人釣魚小艇，買了停在你自己的碼頭位子。主島上原本大家共用的兩艘平台舟拿掉了": "Tide Boat Shop has opened at the west pier of the harbor. Buy a solo kayak, a two-person rowboat or a four-person fishing boat, and it'll be moored at your own spot. The two shared kayaks on the main island are gone",
+ "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。": "Buy boats at Tide Boat Shop by the west pier: solo kayak 🪙800, two-person rowboat 🪙2,500, four-person fishing boat 🪙8,000. Your boat is moored at your own spot beside the west pier; walk over to board. If you own several, choose which one to moor at the shop.",
+ "潮汐船行": "Tide Boat Shop",
+ "⛵ 買船、換船": "⛵ Buy or switch boats",
+ "單人獨木舟": "Solo kayak",
+ "雙人划艇": "Two-person rowboat",
+ "四人釣魚小艇": "Four-person fishing boat",
+ "輕巧好划，一個人慢慢划去找魚。": "Light and easy to paddle. Head out on your own to find fish.",
+ "比較寬、比較穩，前後兩個座位，可以載一個朋友。": "Wider and steadier, with two seats so you can bring a friend.",
+ "有小船艙和遮陽棚的釣魚船，坐得下四個人，出海比較遠也不怕。": "A fishing boat with a small cabin and sunshade. Seats four and handles longer trips out to sea.",
+ "買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。雙人、四人的船之後可以載朋友一起出海。": "Boats you buy are moored at your own spot beside the west pier. Walk over to board. Two- and four-person boats will soon be able to carry friends.",
+ "停在碼頭": "Moored",
+ "換這艘": "Use this one",
+ "要連上雲端（登入）才能買船": "You need to be online (signed in) to buy a boat",
+ "船行還在準備中，晚一點再來": "The boat shop is still getting ready. Come back a bit later",
+ "買船失敗，等一下再試": "Couldn't buy the boat. Try again in a moment"
 }

@@ -9356,5 +9356,21 @@
  "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。": "Naik TIDEGO bersama teman: saat kamu memanggil mobil, orang dalam jarak 25 m mendapat ajakan \"Naik bareng?\". Ketuk \"Naik bareng\" untuk ikut mobil yang sama (maksimal 3). Tetap di dekat mobil; semua naik saat pemanggil naik dan turun bersama di tujuan.",
  "👥 跟朋友一起坐：你叫車的時候，附近 25 公尺內的人會收到「一起坐？」，按了就跟你上同一台車（最多 3 個人），到了一起下車。": "👥 Naik bersama teman: saat kamu memanggil mobil, orang dalam jarak 25 m mendapat ajakan \"Naik bareng?\". Kalau setuju, mereka ikut mobilmu (maksimal 3) dan turun bersamamu.",
  "一起坐": "Naik bareng",
- "離車子太遠，沒趕上這班車": "Kamu terlalu jauh dari mobil dan ketinggalan"
+ "離車子太遠，沒趕上這班車": "Kamu terlalu jauh dari mobil dan ketinggalan",
+ "港口西邊棧橋口開了「潮汐船行」：可以買單人獨木舟、雙人划艇、四人釣魚小艇，買了停在你自己的碼頭位子。主島上原本大家共用的兩艘平台舟拿掉了": "Toko Perahu Pasang sudah buka di dermaga barat pelabuhan. Beli kayak satu orang, perahu dayung dua orang, atau perahu pancing empat orang, dan perahumu akan ditambatkan di tempatmu sendiri. Dua kayak bersama di pulau utama sudah dihapus",
+ "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。": "Beli perahu di Toko Perahu Pasang dekat dermaga barat: kayak satu orang 🪙800, perahu dayung dua orang 🪙2.500, perahu pancing empat orang 🪙8.000. Perahumu ditambatkan di tempatmu sendiri di samping dermaga barat; jalan ke sana untuk naik. Kalau punya beberapa, pilih mana yang ditambatkan di toko.",
+ "潮汐船行": "Toko Perahu Pasang",
+ "⛵ 買船、換船": "⛵ Beli atau ganti perahu",
+ "單人獨木舟": "Kayak satu orang",
+ "雙人划艇": "Perahu dayung dua orang",
+ "四人釣魚小艇": "Perahu pancing empat orang",
+ "輕巧好划，一個人慢慢划去找魚。": "Ringan dan mudah didayung. Berangkat sendiri mencari ikan.",
+ "比較寬、比較穩，前後兩個座位，可以載一個朋友。": "Lebih lebar dan stabil, dengan dua kursi sehingga bisa membawa satu teman.",
+ "有小船艙和遮陽棚的釣魚船，坐得下四個人，出海比較遠也不怕。": "Perahu pancing dengan kabin kecil dan atap peneduh. Muat empat orang dan aman untuk melaut lebih jauh.",
+ "買了的船會停在港口西邊棧橋旁邊你自己的位子，走過去就能上船。雙人、四人的船之後可以載朋友一起出海。": "Perahu yang kamu beli ditambatkan di tempatmu sendiri di samping dermaga barat. Jalan ke sana untuk naik. Perahu dua dan empat orang nanti bisa membawa teman.",
+ "停在碼頭": "Ditambatkan",
+ "換這艘": "Pakai yang ini",
+ "要連上雲端（登入）才能買船": "Kamu perlu online (masuk) untuk membeli perahu",
+ "船行還在準備中，晚一點再來": "Toko perahu masih bersiap. Kembali lagi nanti",
+ "買船失敗，等一下再試": "Gagal membeli perahu. Coba lagi sebentar lagi"
 }
