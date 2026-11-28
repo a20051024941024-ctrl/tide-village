@@ -2526,7 +2526,7 @@ function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航�
     { const g = c.createLinearGradient(0, 0, 0, N); g.addColorStop(0, '#2f7fb8'); g.addColorStop(1, '#2a6ea8'); c.fillStyle = g; c.fillRect(0, 0, N, N); } c.imageSmoothingEnabled = true; c.drawImage(SeaMap.land, 0, 0, N, N);
     c.setLineDash([5, 6]); c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.75)'; for (const id in SEA_LANES){ const P = SEA_LANES[id]; c.beginPath(); P.forEach((q, i) => { if (i) c.lineTo(X(q[1]), Y(q[0])); else c.moveTo(X(q[1]), Y(q[0])); }); c.stroke(); } c.setLineDash([]);
     const label = (tx, x, z, col, sz) => { c.font = `bold ${sz || 15}px sans-serif`; c.textAlign = 'center'; c.lineWidth = 4; c.strokeStyle = 'rgba(10,30,50,.75)'; c.strokeText(tx, X(z), Y(x)); c.fillStyle = col || '#fff'; c.fillText(tx, X(z), Y(x)); };
-    label(i18nT('潮汐釣魚村'), 0, 0, '#fff', 17); label(i18nT('冰封群島'), FROST.x + 4, FROST.z + 40); label(i18nT('深海浮台'), ABYSS.x - 12, ABYSS.z); label(i18nT('神秘島'), MYST.x - 22, MYST.z); label(i18nT('苔森之島'), GREEN.x, GREEN.z); label(i18nT('小島'), ISLE.x, ISLE.z, '#fff', 13); label(i18nT('漂流島'), WILD.x - WILD.r - 6, WILD.z, '#ffe7a8', 14);
+    label(i18nT('潮汐釣魚村'), 0, 0, '#fff', 17); label(i18nT('冰封群島'), FROST.x + 4, FROST.z + 40); label(i18nT('深海浮台'), ABYSS.x - 12, ABYSS.z); label(i18nT('神秘島'), MYST.x - 22, MYST.z); label(i18nT('苔森之島'), GREEN.x, GREEN.z); label(i18nT('小島'), ISLE.x, ISLE.z, '#fff', 13); /* v997 荒島拿掉：海圖不標 */
     for (const L of SEA_LM){ const on = SeaMap.seen.has(L.id), x = X(L.z), y = Y(L.x); c.beginPath(); c.arc(x, y, on ? 7 : 9, 0, 6.283); c.fillStyle = on ? '#ffd23f' : 'rgba(255,255,255,.28)'; c.fill(); c.lineWidth = 2; c.strokeStyle = on ? '#18334a' : 'rgba(255,255,255,.6)'; c.stroke(); if (on) label(i18nT(L.n), L.x - 9, L.z, '#ffe9a0', 13); else { c.font = 'bold 13px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff'; c.fillText('?', x, y + 5); } }
     if (!onIsle && Math.abs(me.pos.x) < W && Math.abs(me.pos.z) < W){ const x = X(me.pos.z), y = Y(me.pos.x); c.beginPath(); c.arc(x, y, 6, 0, 6.283); c.fillStyle = '#ff5a48'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke(); label(i18nT('你'), me.pos.x - 8, me.pos.z, '#fff', 12); }
     body.appendChild(cv);
@@ -2534,7 +2534,10 @@ function seaChart(body){ try { body.appendChild(el('div', 'dexhead', `🧭 航�
 function i18nT(s){ try { return typeof tr === 'function' ? tr(s) : s; } catch(e){ return s; } }
 /* 坐阿海的船：真的坐一段 */
 const Voy = { on:false, m:null, btn:null };
-function voyStart(tp){ if (!tp) return; const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
+const CUT_DOCK = new Set(['wilddock']);
+const LV_GATE = { dive: 8, frostdock: 12 };   /* v997 照研究的順序：潛水、冰封群島留著，但等級到了才開（新玩家先專心釣魚） */
+function lvGate(k){ const need = LV_GATE[k]; if (!need) return 0; let L = 99; try { L = lvOf(calcXP()); } catch(e){} return L >= need ? 0 : need; }   /* v997 作者：「體育場跟荒島先拿掉」→ 荒島（漂流島）不能再坐船去；已經在島上的人照樣能坐船回來 */
+function voyStart(tp){ if (!tp) return; if (CUT_DOCK.has(tp.id)){ toast('那座島現在去不了了'); return; } { const g = lvGate(tp.id); if (g){ toast(`要到 Lv.${g} 阿海才會載你去那裡`); return; } } const lane = SEA_LANES[tp.id]; if (!lane || onIsle || Voy.on){ travelTo(tp); return; } if (tyBlock('出海')) return;
   closeSheet(); if (Photo.on) exitPhoto(); if (Dive.on) endDive('', true); if (myBoat){ const b = myBoat; myBoat = null; me.sitting = false; b.m.position.set(b.dock.x, WATER_LEVEL, b.dock.z); b.m.rotation.set(0, b.dock.rot, 0); } if (F.phase !== 'idle') cancelFishing(); try { if (Bike.on) bikeOff(); } catch(e){} if (mySeat) try { standUp(); } catch(e){}
   const W2V = W2S.on && W2 && W2.posts && W2.posts.voy && W2.near(me.pos.x, me.pos.z) ? w2VoyPath(lane, tp.id) : null;   /* v933 從新主島出發：先開出新主島的港口，再接到外島的航道 */
   const P = W2V ? W2V.P : [VOY_DOCK.slice(0, 2), [40, -30.5], [52, -30], [56, -50]].concat(lane), cum = [0];   /* 沿著出港的水道，不壓過碼頭 */ for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + (W2V && i === W2V.jump ? 0 : Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]))); const len = cum[cum.length - 1];   /* 中間那一大段海算 0 公尺：開到那裡畫面一暗就接過去 */
@@ -16814,9 +16817,9 @@ function renderFerry(body){
     tb.append(cb, el('span', '', '👥 組隊出海：邀請大廳裡的人一起去（祕密窩點不會邀請，別人不會知道）')); body.appendChild(tb);
     body.appendChild(el('p', 'sub', '在船上釣魚時，附近 16 公尺內每多一個人也在船上，大家的魚都會快一點上鉤（每人 8%，最多 3 人）。')); }
   { body.appendChild(el('div', 'dexhead', '⛴️ 海上的好地方')); const ul = el('ul', 'shoplist');
-    for (const [id, ic, nm, ds] of [['wilddock', '🏝️', '遠方荒島・漂流島（求生）', '東南外海一座沒有人住的大島，什麼都要自己來：撿材料、做竹竿、生火、蓋遮雨棚和小木屋。島上會餓、會累，天黑要烤火、下雨要躲雨。有沙灘、竹林、小山、岩岸潮池，還有一艘破船'], ['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic));
+    for (const [id, ic, nm, ds] of [['wilddock', '🏝️', '遠方荒島・漂流島（求生）', '東南外海一座沒有人住的大島，什麼都要自己來：撿材料、做竹竿、生火、蓋遮雨棚和小木屋。島上會餓、會累，天黑要烤火、下雨要躲雨。有沙灘、竹林、小山、岩岸潮池，還有一艘破船'], ['frostdock', '❄️', '北方冰封群島', '下雪的島，中間結冰的湖可以鑿冰洞釣魚，北邊海岸有流冰，南邊是雪松山滑雪場（坐纜車上山、滑下來比誰快）。冰湖用手竿、海岸用遠投竿最好'], ['abyssdock', '🌌', '深海浮台', '遠洋上的浮台，底下是很深的海溝，有發光的深海魚和古老的深海鯊。用遠投竿最好'], ['mystdock', '🌋', '遠洋神秘島', '寒流和暖流交會的火山島，住著別的地方沒有的魚，還有海獅和大象龜'], ['greendock', '🌲', '苔森之島', '很大的森林島：長滿青苔的巨木、北邊的瀑布、中間的湖、流進海裡的溪，南邊是沙灘。地方很大，到處有長椅，適合找個角落慢慢釣、跟朋友聊天。有鹿和猴子']]){ if (CUT_DOCK.has(id)) continue; const li = el('li'); li.appendChild(el('span', 'dishic', ic));
       const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
-      const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); voyStart(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
+      const gl = lvGate(id), a = el('div', 'tacts'), b = el('button', 'tbtn' + (gl ? ' ghost' : ''), gl ? `🔒 Lv.${gl}` : '載我去'); b.addEventListener('click', () => { if (gl){ toast(`要到 Lv.${gl} 阿海才會載你去那裡`); return; } closeSheet(); voyStart(TRAVEL.find(t => t.id === id)); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); }
     if (W2S.on){ for (const [id, ic, nm, ds] of [['greendock', '🧺', '苔森之島・阿嬤', '阿嬤搬到苔森之島了，就在碼頭上岸的地方擺攤收魚。跑船生意：新主島的魚載去給阿嬤收，多三成']]){ const li = el('li'); li.appendChild(el('span', 'dishic', ic)); const d = el('div', 'tinfo'); d.appendChild(el('div', 'n', nm)); d.appendChild(el('div', 'sub2', ds)); li.appendChild(d);
         const a = el('div', 'tacts'), b = el('button', 'tbtn', '載我去'); b.addEventListener('click', () => { closeSheet(); if (id === 'harborsq') W2S.home = false; const tp = TRAVEL.find(t => t.id === id); if (tp) travelTo(tp); }); a.appendChild(b); li.appendChild(a); ul.appendChild(li); } }   /* v933 新主島預覽：阿海也載你去阿嬤那裡、回舊村子 */
     body.appendChild(ul); }
@@ -17285,7 +17288,7 @@ function causticTex(){ if (CAUSTIC) return CAUSTIC; const N = 128, cv = document
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function startDive(site, back){
   site = DIVE_SITES[site] ? site : 'reef'; Dive.back = back || null;   /* back：從岸邊下水的話，浮上來回到這裡 */
-  if (Dive.on) return; if (tyBlock('潛水')) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
+  if (Dive.on) return; { const g = lvGate('dive'); if (g){ toast(`潛水要到 Lv.${g} 才開放，先多釣幾條魚吧`); return; } } if (tyBlock('潛水')) return; if (!hasDive('dive_suit')){ toast('要先買潛水裝備才能潛水（商店的「🤿潛水」分頁）'); return; }
   if (!diveSiteOk(site)){ toast(`${DIVE_SITES[site].name}要先買：${DIVE_SITES[site].need.filter(id => !hasDive(id)).map(id => DIVE_BY_ID[id].name).join('、')}`); return; }
   Dive.wsWant = null; if (site === 'offshore'){ try { Dive.wsWant = wsFind(me.pos.x, me.pos.z, 90); } catch(e){} }   /* v560 船底下有沒有睡覺的抹香鯨群 */
   Dive.site = site; Dive.ret = myBoat && Ferry.on ? { x: me.pos.x, z: me.pos.z, label: Ferry.label || '外海' } : null;
@@ -19041,7 +19044,7 @@ function nearShop(){
   { const dx = Math.max(0, Math.abs(me.pos.x - SHRIMP_DOOR.x) - 3.2), dz = Math.max(0, Math.abs(me.pos.z - (SHRIMP_DOOR.z - 0.6)) - 2.1); if (Math.hypot(dx, dz) < 1.6 && !onIsle) return { id:'shrimpdoor', label:'釣蝦場', mode:'shrimpdoor' }; }
   if (Math.hypot(me.pos.x - CAFE_DOOR.x, me.pos.z - CAFE_DOOR.z) < 1.7) return { id:'cafedoor', label:'潮汐食堂', mode:'cafedoor' };
   if (Math.hypot(me.pos.x - MUSEUM_DOOR.x, me.pos.z - MUSEUM_DOOR.z) < 1.7) return { id:'museumdoor', label:'海洋博物館', mode:'museumdoor' };
-  if (Math.hypot(me.pos.x - STAD_DOOR.x, me.pos.z - STAD_DOOR.z) < 1.8) return { id:'staddoor', label:'潮汐體育場', mode:'staddoor' };
+  /* v997 體育場拿掉：門不再能進去 */
   if (Math.hypot(me.pos.x - POOL_DOOR.x, me.pos.z - POOL_DOOR.z) < 1.7) return { id:'pooldoor', label:'潮汐撞球館', mode:'pooldoor', sub:'🎱 進去打撞球' };
   if (!onIsle && ZC.g && Math.hypot(me.pos.x - ZC.at[0], me.pos.z - ZC.at[1]) < 2.1) return { id:'zc', label:'築城守土', mode:'zc', sub:'🏰 坐下來玩一局' };
   if (!onIsle && Math.hypot(me.pos.x - PET_DOOR.x, me.pos.z - PET_DOOR.z) < 1.7) return { id:'petdoor', label:'小花寵物店', mode:'petdoor', sub:'🐾 進去看看' };
@@ -25285,6 +25288,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u997', d:'11/28', items:[['🏟️','體育場和遠方荒島（漂流島）先收起來了，新主島體育場那塊地先空著'], ['🔒','潛水 Lv.8、冰封群島 Lv.12 才開放，新玩家先專心釣魚']] },
   { id:'u996', d:'11/28', items:[['👫','好友頁重新整理：左邊分「好友／周圍／封鎖」，好友頁只列好友；在線的好友旁邊有「去找他」「呼叫」，私訊、送禮、小島收在「⋯」'], ['📞','語音不用一直按著了：接通就能講，不想講話點 🎤 關麥克風'], ['📱','手機主畫面換新：海的桌布、彩色的圖示、最下面一排常用的（潮搭Go、地圖、訊息、好友）']] },
   { id:'u995', d:'11/28', items:[['🔥','聯名套裝：造型 → 衣櫃 → 上衣，最上面三套「阿萬・夜騎」「阿默・黑影」「阿穎・金浪」，整套 🪙2,500'], ['✨','穿整套身上會一直冒那一套顏色的光點，別人也看得到；點了可以先試穿，喜歡再整套買']] },
   { id:'u994', d:'11/28', items:[['📞','好友語音：好友分頁裡，在線上的好友旁邊有 📞，按了打給他，他按「接聽」就能講話'], ['🎤','按著「🎤 按著說話」才會送出聲音，放開就停；可以靜音對方、檢舉、掛斷。聲音是兩支手機直接連，不錄音'], ['🛡️','只有互相加好友的人打得通；兒童模式不能用，未滿 18 歲預設關（好友分頁上面可以打開）']] },

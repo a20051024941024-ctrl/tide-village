@@ -84,7 +84,7 @@ export function init(A){
   const TRAILS = [[[700,283],[684,240],[640,205]], [[934,272],[930,244],[918,210],[870,186],[822,190]], [[440,390],[380,400],[300,395],[240,370],[200,345]], [[700,319],[700,362]], [[540,402],[490,398],[440,390]], [[684,240],[697,224],[706,212]]];   // 0、1 森林步道；5 步道岔出去到山洞；2 紅樹林木棧道；3 過河小橋接到水族館；4 水族館接到木棧道
   const RAIL = [[1160,810],[1300,780],[1420,640],[1560,560],[1610,470],[1620,380],[1500,300],[1360,235],[1250,222],[1080,230],[900,270],[700,330],[560,330],[430,430],[320,470],[260,560],[330,700],[480,740],[640,780],[820,830],[1000,840]];
   /* v936 作者：「火車太多站了而且好近，所以一直停車」→ 11 站剩 5 站，一站大約隔 100～170 公尺 */
-  const STA = [[1560,560,'體育場・沙灘'],[1080,230,'村公所・娛樂館'],[560,330,'水族館・森林'],[300,520,'居民區・紅樹林'],[990,840,'港口・商店街']];
+  const STA = [[1560,560,'沙灘'],[1080,230,'村公所・娛樂館'],[560,330,'水族館・森林'],[300,520,'居民區・紅樹林'],[990,840,'港口・商店街']];
 
   /* ---------- 畫進資料格 ---------- */
   const fillL = polys => { const L = layer(); for (const p of polys){ closed(L.g, p); L.g.fill(); } return L; };
@@ -372,8 +372,8 @@ export function init(A){
         colliders.push({ t: 'b', x: OX + x, z: OZ + z + 0.9, hw: 8.1, hd: 6.1, big: true }); RSV.push([x - 4, z + 1, 9], [x + 4, z + 1, 9]); label('博物館', x, 12, z + 1); }
       else { B(parts, '#e9e1cf', 24, 6.4, 12, x, 3.5, z); G(parts, '#7c8fb0', roofG(26, 13.4, 3.6), x, 6.7, z); for (let i = 0; i < 6; i++) G(parts, '#ffffff', new THREE.CylinderGeometry(0.5, 0.56, 5.6, 10), x - 10 + i * 4, 3.1, z + 6.7); B(parts, '#d9cfb8', 25, 0.5, 3.4, x, 0.55, z + 7.2);
         colliders.push({ t: 'b', x: OX + x, z: OZ + z + 0.6, hw: 12.2, hd: 7.4, big: true }); RSV.push([x - 6, z, 11], [x + 6, z, 11]); label('博物館', x, 14, z); } }
-    /* 體育場 */
-    { const [x, z] = P(1480, 430), n = 28; for (let i = 0; i < n; i++){ const a = i / n * 6.2832, ca = Math.cos(a), sa = Math.sin(a); for (let k = 0; k < 3; k++) B(parts, ['#3d66b5', '#f2c230', '#e2574c'][k], 4.6, 1.3 + k * 1.3, 2.1, x + ca * (19 + k * 2.1), 0.9 + k * 0.65, z + sa * (9.5 + k * 2.1), Math.atan2(-9.5 * ca, -19 * sa)); }   /* v968 三排座位換成藍、黃、紅（原本最外圈是灰色方塊，檢查報告第 2 項） */
+    /* 體育場：v997 作者「體育場跟荒島先拿掉」→ 先不蓋（空地留著，之後放別的） */
+    if (false) { const [x, z] = P(1480, 430), n = 28; for (let i = 0; i < n; i++){ const a = i / n * 6.2832, ca = Math.cos(a), sa = Math.sin(a); for (let k = 0; k < 3; k++) B(parts, ['#3d66b5', '#f2c230', '#e2574c'][k], 4.6, 1.3 + k * 1.3, 2.1, x + ca * (19 + k * 2.1), 0.9 + k * 0.65, z + sa * (9.5 + k * 2.1), Math.atan2(-9.5 * ca, -19 * sa)); }   /* v968 三排座位換成藍、黃、紅（原本最外圈是灰色方塊，檢查報告第 2 項） */
       G(parts, '#f3ede2', new THREE.CylinderGeometry(1, 1, 4.3, 48, 1, true).scale(24.6, 1, 15.0), x, 2.35, z); G(parts, '#2c6fb5', new THREE.CylinderGeometry(1, 1, 0.5, 48, 1, true).scale(24.7, 1, 15.1), x, 4.3, z);   /* 外牆：米白色加一圈藍色 */
       for (let i = 0; i < 24; i++){ const a = i / 24 * 6.2832; if (Math.abs(Math.cos(a) + 1) < 0.08) continue; B(parts, '#8fd3f4', 1.6, 1.2, 0.12, x + Math.cos(a) * 24.75, 2.6, z + Math.sin(a) * 15.15, Math.atan2(Math.cos(a) * 15.15, Math.sin(a) * 24.75)); }
       G(parts, '#d8584a', new THREE.CylinderGeometry(1, 1, 0.1, 36).scale(16.5, 1, 7.4), x, 0.5, z); G(parts, '#4fae55', new THREE.CylinderGeometry(1, 1, 0.1, 36).scale(12.5, 1, 4.6), x, 0.56, z); colliders.push({ t: 'c', x: OX + x, z: OZ + z, r: 9, big: true }, { t: 'c', x: OX + x - 13, z: OZ + z, r: 9.5, big: true }, { t: 'c', x: OX + x + 13, z: OZ + z, r: 9.5, big: true });
@@ -425,7 +425,7 @@ export function init(A){
         const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace; const sg2 = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.66), new THREE.MeshBasicMaterial({ map: st })); sg2.position.set(0, 2.95, h.d / 2 + 0.03); g.add(sg2); }   /* 外觀：淺綠色的兩層樓、綠白條紋遮雨棚、門上的招牌 */    /* v968 撞球館、釣蝦場搬到潮汐娛樂館 */ put(Wc.length > 3 ? Wc[Wc.length - 1] : null, 'tackle', '釣具店', '🎣');
       put(Ec.find(q => q.row === 5 && !q.used) || null, 'tailor', '阿綾服裝店', '👗');   /* v951 阿綾服裝店：商店街東排最靠港口那間（v927 就留給她，裡面擺衣架） */
       for (const [k, label, icon] of free){ const h = street.find(q => !q.used); if (h){ h.used = 1; door(k, label, icon, h.x + Math.sin(h.face) * (h.d / 2 + 0.9), h.z + Math.cos(h.face) * (h.d / 2 + 0.9), h.face); } }
-      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(764, 663); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1255, 296); door('pool', '潮汐撞球館', '🎱', x - 8, z + 7.4, 0); door('shrimp', '釣蝦場', '🦐', x + 8, z + 7.4, 0); }   /* v968 潮汐娛樂館的兩個門 */ { const [x, z] = P(1480, 430); door('stad', '潮汐體育場', '🏟️', x - 25.5, z + 3, -Math.PI / 2); } }
+      { const [x, z] = P(1210, 640); door('market', '潮汐魚市場', '🐟', x, z - 7.2, Math.PI); } { const [x, z] = P(764, 663); door('museum', '海洋博物館', '🏛️', x, z - 7.4, Math.PI); } { const [x, z] = P(1255, 296); door('pool', '潮汐撞球館', '🎱', x - 8, z + 7.4, 0); door('shrimp', '釣蝦場', '🦐', x + 8, z + 7.4, 0); }   /* v968 潮汐娛樂館的兩個門 */ { const [x, z] = P(1480, 430); /* v997 體育場拿掉 */ } }
     { const [x, z] = P(470, 585); label('居民區', x, 9, z); } { const [x, z] = P(985, 700); label('商店街', x, 9, z, 0.8); }
     /* 預留的空地：照規劃圖把房子放滿以後，還空著的大塊草地剩這兩塊（西邊海岸、水族館和村公所中間）；全島空草地約 25% */
     for (const [px, py, t] of [[221, 556, '預留・以後擴建'], [783, 355, '預留']]){ const [x, z] = P(px, py); label(t, x, 6, z, 0.75); }
@@ -580,7 +580,7 @@ export function init(A){
       const stands = [], logoTex = (() => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#8fd3f4'; c.beginPath(); c.moveTo(0, 86); for (let x = 0; x <= 256; x += 8) c.lineTo(x, 86 + Math.sin(x / 22) * 7); c.lineTo(256, 128); c.lineTo(0, 128); c.fill();
         c.fillStyle = '#26445c'; c.font = 'bold 46px "Huninn","Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.fillText('潮搭Go', 128, 62); c.font = 'bold 20px "Huninn","Noto Sans TC",sans-serif'; c.fillText('上車處', 128, 112); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
       if (false)   /* v966 作者：「應該是玩家打電話過去，然後玩家站到原地他會自己過來」→ 不再畫上車處（白框、牌子），車直接開到玩家旁邊的路邊 */
-      for (const [px, py, nm] of [[975, 560, '主城廣場'], [990, 790, '港口'], [985, 690, '商店街'], [1105, 600, '中央市場'], [735, 430, '水族館'], [965, 372, '村公所'], [482, 580, '居民區'], [1112, 730, '活動場地'], [1255, 372, '遊樂園'], [1460, 470, '體育場'], [1460, 640, '沙灘'], [800, 640, '博物館']]){
+      for (const [px, py, nm] of [[975, 560, '主城廣場'], [990, 790, '港口'], [985, 690, '商店街'], [1105, 600, '中央市場'], [735, 430, '水族館'], [965, 372, '村公所'], [482, 580, '居民區'], [1112, 730, '活動場地'], [1255, 372, '遊樂園'], [1460, 640, '沙灘'], [800, 640, '博物館']]){
         const [ax, az] = P(px, py); let best = null;   /* 在鋪了地磚的地方（廣場、人行道）找一塊 2.6×4.4 公尺的空地，方向跟最近的大路平行；不壓到大路、不靠鐵軌、不壓到房子 */
         for (let gx = -30; gx <= 30; gx += 1.5) for (let gz = -30; gz <= 30; gz += 1.5){ const x = ax + gx, z = az + gz, dd = Math.hypot(gx, gz); if (dd > 30 || (best && dd >= best.sc)) continue;
           if (samp(sdPave, x, z) < 2.2 || hAt(x, z) < 0.25 || railDist(x, z) < 5 || hit(x, z, 2.6) || stands.some(s => Math.hypot(s.x - x, s.z - z) < 25)) continue;
@@ -1109,7 +1109,7 @@ export function init(A){
     /* 這一點是什麼地：0 不是主島、1 水和紅樹林、2 路和廣場、3 森林、4 沙灘、5 蓋了東西、6 海岸邊、7 空草地（量「還有多少地沒用」用的） */
     kind: (x, z) => { const lx = x - OX, lz = z - OZ; if (!inBox(lx, lz) || samp(sdMain, lx, lz) <= 0) return 0; if (samp(HG, lx, lz) < WL || samp(sdMang, lx, lz) > -3) return 1; if (paved(lx, lz, 0.5)) return 2; if (samp(sdFor, lx, lz) > -4) return 3; if (samp(sdSand, lx, lz) > -3) return 4; if (reserved(lx, lz)) return 5; if (samp(sdLand, lx, lz) < 6) return 6; return 7; },
     /* 預覽用：一按就過去的地點（島上的公尺） */
-    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['巡守站', 222, 356], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['潮汐娛樂館', 1255, 372], ['體育場', 1352, 449], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
+    spots: [['主城廣場', 975, 560], ['村公所', 965, 372], ['港口', 990, 822], ['商店街', 985, 690], ['博物館', 840, 608], ['水族館', 735, 410], ['活動場地', 1112, 730], ['紅樹林', 446, 390], ['巡守站', 222, 356], ['居民區', 482, 580], ['森林步道', 696, 262], ['瀑布', 805, 196], ['山洞', 694, 226], ['護林員小屋', 925, 246], ['潮汐娛樂館', 1255, 372], ['玩家建地', 1310, 535], ['中央市場', 1105, 582], ['沙灘', 1490, 715]].map(([n, px, py]) => [n, ...P(px, py)]),
   };
   /* v927 要站在水邊的位置（釣魚的村民、蔚博士調查的岸邊）：從排好的那一點找最近的水邊（當成滿潮），站好、面朝水；不靠鐵軌、不站在東西裡面；那裡不長樹。
      蔚博士的往後退一步半（不擋到在那裡釣魚的人）。找不到同一種水的就拿掉，她留在水族館入口。 */
