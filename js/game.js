@@ -5990,11 +5990,11 @@ K3.DES = {
 K3.SETS = {
   wan: { n: '阿萬・夜騎', ic: '🚕', d: '黑T 配會反光的青色條紋、黑短褲白邊、藍鞋。晚上開車送貨的帥氣樣子。', glow: ['#3ff0e0', '#9ffcf2'], cfg: { top: 'tee', bot: 'shorts', shoes: 'sneak', hat: 'none', mask: 'none' }, des: { top: 'cwan', bot: 'cwan', shoes: 'cwan' } },
   mo: { n: '阿默・黑影', ic: '🖤', d: '全黑連帽衣上有紫色的網紋、黑帽黑口罩黑鞋。安靜、神祕，走過去會留下一縷紫光。', glow: ['#8a5cff', '#c7a8ff'], cfg: { top: 'hoodie', bot: 'pants', shoes: 'sneak', hat: 'cap', mask: 'mask' }, des: { top: 'cmo', bot: 'cmo', shoes: 'cmo', hat: 'cmo', mask: 'cmo' } },
-  ying: { n: '阿穎・金浪', ic: '👑', d: '金色海浪外套、米白長褲金條紋、金鞋、金緞帶草帽。最閃的一套，全身金光。', glow: ['#ffd34a', '#fff3b0'], cfg: { top: 'wave', bot: 'pants', shoes: 'sneak', hat: 'straw', mask: 'none' }, des: { top: 'cying', bot: 'cying', shoes: 'cying', hat: 'cying' } } };
+  ying: { n: '阿穎・櫻浪', ic: '🌸', d: '粉紅海浪外套、白長褲粉條紋、粉紅鞋、粉緞帶草帽。阿穎最愛的粉紅色，全身粉色的光。', glow: ['#ff7fb0', '#ffd1e3'],   /* v1016 作者：「阿穎喜歡的明明是粉紅色」 */ cfg: { top: 'wave', bot: 'pants', shoes: 'sneak', hat: 'straw', mask: 'none' }, des: { top: 'cying', bot: 'cying', shoes: 'cying', hat: 'cying' } } };
 K3.SET_PRICE = 2500;
 K3.DES.top.tee.cwan = ['阿萬・夜騎T', '#16161a', '#3ff0e0', 'stripe', '#3ff0e0', 18, 3]; K3.DES.bot.shorts.cwan = ['阿萬・夜騎短褲', '#141418', '#f2f2f2', 'vstripe', '#f2f2f2', 22, 3]; K3.DES.shoes.sneak.cwan = ['夜騎藍', '#2f45a8', null, null, null, null, 3];
 K3.DES.top.hoodie.cmo = ['阿默・黑影連帽衣', '#121216', '#8a5cff', 'net', '#4a2f8a', 9, 3]; K3.DES.bot.pants.cmo = ['黑影長褲', '#101014', '#2a2a30', 'vstripe', '#5a3aa8', 18, 3]; K3.DES.shoes.sneak.cmo = ['黑影', '#141416', null, null, null, null, 3]; K3.DES.hat.cap.cmo = ['黑影帽', '#121216', null, null, null, null, 3]; K3.DES.mask.mask.cmo = ['黑影口罩', '#141416', null, null, null, null, 3];
-K3.DES.top.wave.cying = ['阿穎・金浪外套', '#f3d27a', '#ffffff', 'wave', '#e0a800', 9, 3]; K3.DES.bot.pants.cying = ['金浪長褲', '#f6f1e4', '#c9a227', 'vstripe', '#e0b84a', 16, 3]; K3.DES.shoes.sneak.cying = ['金色', '#e0b030', null, null, null, null, 3]; K3.DES.hat.straw.cying = ['金緞帶', '#e0a800', null, null, null, null, 3];
+K3.DES.top.wave.cying = ['阿穎・櫻浪外套', '#f7b6cc', '#ffffff', 'wave', '#ff86ad', 9, 3]; K3.DES.bot.pants.cying = ['櫻浪長褲', '#f8f3f2', '#f08aa8', 'vstripe', '#f5a3bd', 16, 3]; K3.DES.shoes.sneak.cying = ['櫻粉', '#f28aac', null, null, null, null, 3]; K3.DES.hat.straw.cying = ['粉緞帶', '#f28aac', null, null, null, null, 3];
 K3.setOf = c => { if (!c || !c.c) return null; for (const [k, S] of Object.entries(K3.SETS)) if (c.top === S.cfg.top && c.c.top === S.des.top && c.c.bot === S.des.bot) return k; return null; };
 K3.setOwn = k => (rec.owned || []).includes('k3s_' + k);
 K3.setApply = (x, k) => { const S = K3.SETS[k]; Object.assign(x, S.cfg); x.c = Object.assign({}, x.c || {}); for (const p of ['top', 'bot', 'shoes', 'hat', 'mask']) delete x.c[p]; Object.assign(x.c, S.des); };
@@ -8058,7 +8058,7 @@ function updateFishing(dt, t){
   try { signsTick(dt, t); } catch(e){}
   try { flkTick(dt, t); } catch(e){ if (!flkTick.err){ flkTick.err = 1; console.warn('flk', e); } }
   try { smTick(dt, t); } catch(e){ if (!smTick.err){ smTick.err = 1; console.warn('sea', e); } }
-  { const inf = (F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing') && !AutoF.on; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
+  { const inf = F.phase === 'charging' || F.phase === 'reeling' || F.phase === 'landing' || F.phase === 'bite'; if (inf !== updateFishing._inf){ updateFishing._inf = inf; document.body.classList.toggle('infish', inf); } }   // 拉魚時把下面的聊天列藏起來，不要擋到張力條
   fishStandTick();
   const act = $('#act');
   if (F.phase === 'charging'){
@@ -8342,8 +8342,9 @@ function landFish(){
   const from = me.bobPos.clone(); from.y = 0.1;
   const fm = fishModel(f, fishShowScale(w)); fm.position.copy(from); scene.add(fm); const fmAct = fishAct(fm, 'air');   /* v448 吊在線上：頭朝上、整條身體猛甩 */
   const to = new THREE.Vector3(me.pos.x, me.pos.y + 2.4, me.pos.z);
-  const fpc = FP.act, wild = F.spot && F.spot.wild, flop = !fpc && !wild && !CLASSIC;
-  if (fpc){ scene.remove(fm); try { fpCatch(f, w, from, wild || CLASSIC ? null : { dur: flopDur(f, w) }); } catch(e){ console.warn('fp', e); } } else if (!flop) jumpers.push({ m: fm, from, to, t: 0, end: 0.92, act: fmAct });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
+  const fpc = FP.act, wild = F.spot && F.spot.wild, smallF = f.rarity === '常見' && w < 3 && !BIG_FISH.has(f.id) && !myBoat, flop = !fpc && !wild && !CLASSIC && !smallF;   /* v1016 作者：「不要每個魚都在地板，小隻的釣起來時順順的拿在手上」→ 常見、3 公斤以下的小魚直接飛進手裡 */
+  if (smallF && !fpc && !wild){ to.set(me.pos.x + Math.sin(me.rot) * 0.48, me.pos.y + (me.av.kid ? 0.85 : 1.0), me.pos.z + Math.cos(me.rot) * 0.48); }
+  if (fpc){ scene.remove(fm); try { fpCatch(f, w, from, wild || CLASSIC ? null : { dur: flopDur(f, w) }); } catch(e){ console.warn('fp', e); } } else if (!flop) jumpers.push({ m: fm, from, to, t: 0, end: smallF ? 0.9 : 0.92, act: fmAct, soft: smallF });   /* v503 第一人稱：魚不是飛到角色頭上，而是拉到自己眼前 */
   ripple(from.x, from.z, true); SFX.catch(); fxLand(f, from); try { catchMoStart(f, from, fpc); } catch(e){}
   if (wild){ setTimeout(() => wildLanded(f, w), fpc ? 3600 : 1100); return; }   /* v593 荒島的魚：變成食物、記進荒島筆記，不進村子的紀錄 */
   const fin = () => { me.fishing = false; F.phase = 'result'; const res = recordCatch(f, w); try { fkCaught(f); } catch(e){} if (f.sev) sevCaughtByMe(f, w); if (f.rs && F.rsTag) RS.mine.add(String(F.rsTag).split(':')[0]); showCatch(f, w, res); announceCatch(f, w, F.spot.id); pushPresence(true); me.holdFish(f, w, 5); if (!fpc && (f.rarity === '傳說' || f.rarity === '稀有' || w >= 20)) startEmote(me, 'cheer'); };
@@ -8558,8 +8559,8 @@ function updateJumpers(dt, t){
   for (let i = jumpers.length - 1; i >= 0; i--){
     const j = jumpers[i]; j.t += dt;
     if (j.flop && j.t >= 0.9){ jumpers.splice(i, 1); flopLand(j.m, j.act, j.to, j.flop); continue; }
-    const k = Math.min(1, j.t / 0.9);
-    j.m.position.lerpVectors(j.from, j.to, k); j.m.position.y += Math.sin(k*Math.PI) * (j.net ? 0.3 : 1.6);
+    const k0 = Math.min(1, j.t / 0.9), k = j.soft ? 1 - Math.pow(1 - k0, 2.2) : k0;   /* 小魚：前面快、最後慢慢落進手裡 */
+    j.m.position.lerpVectors(j.from, j.to, k); j.m.position.y += Math.sin(k*Math.PI) * (j.net ? 0.3 : j.soft ? 0.9 : 1.6);
     if (j.net){ const p = j.m.userData.pole, dx = me.pos.x - j.m.position.x, dy = me.pos.y + 1.3 - j.m.position.y, dz = me.pos.z - j.m.position.z, L = Math.hypot(dx, dy, dz) || 1; p.scale.y = L; p.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / L, dy / L, dz / L)); }
     else if (!j.act){ j.m.rotation.z = Math.sin(t*14) * 0.4; j.m.rotation.y += dt * 4; }
     if (j.t > (j.end || 2.6)){ scene.remove(j.m); jumpers.splice(i, 1); }   /* end：落到手上就收掉（手上會換成 holdFish 的魚） */
@@ -21262,7 +21263,9 @@ function applyPeer(pp){
     resolveNames([pp.by]).then(() => p.fisher.setName(peerName(p)));
   }
   p.pres = pr; p.by = pp.by; try { if (pr.cz && !isBlockedPeer(pp.peer) && (pr.is || null) === (onIsle ? onIsle.owner : null)) syncPeerChum(pp.peer, pr.cz); } catch(e){} try { if (!isBlockedPeer(pp.peer)) syncPeerSecret(pp.peer, pr.sc || [], pr.n); } catch(e){}
+  const _px = p.target.x, _pz = p.target.z;
   if (pos){ if (W2 && W2.near(+pos[0]||0, +pos[1]||0)) p.target.set(+pos[0], 0, +pos[1]);   /* v919 新主島在 z 1500 那一帶：位置不要被切回 ±400（不然在那裡看不到別人，沒辦法一起看大看板） */ else p.target.set(clamp(+pos[0]||0, -400, 400), 0, clamp(+pos[1]||0, -400, 400));   /* v619 撞球館在 z 199.5～212.5，以前別人的位置被切在 200 → 在你畫面上全部擠在北邊牆、果汁吧那裡，進門也不是從門口出現，站在球桌旁也算「太遠」不能邀請 */   /* v271 以前 z 只到 -110～90，深海浮台（-145）、神秘島、苔森之島的人會被擠到海上 */ p.y = clamp(+pos[2]||0, DIVE.y - 2, W2 ? 16 : 8); }
+  if (pos) peerVel(p, _px, _pz);
   p.rot = Number.isFinite(+pr.r) ? +pr.r : p.rot;
   p.fisher.setLook(isHex(pr.sh) ? pr.sh : '#9fb3bf', isHex(pr.ht) ? pr.ht : '#ffd36a');
   p.fisher.setGear(cleanGear(pr.gr));
@@ -21305,12 +21308,16 @@ function applyPeer(pp){
   if (pr.e && typeof pr.e === 'object' && EMOTES[pr.e.k] && pr.e.at !== p.lastEmote){ p.lastEmote = pr.e.at; if (pr.e.k === 'wave') try { meetPeerWave(pp.peer); } catch(e){} const D = EMOTE_DEF[pr.e.k]; p.fisher.say(D && D.bub || EMOTES[pr.e.k], 'emote', 3); startEmote(p.fisher, pr.e.k); if ((pr.e.k === 'clap' || pr.e.k === 'thumbs') && me && !me.emote && Math.hypot(p.fisher.pos.x - me.pos.x, p.fisher.pos.z - me.pos.z) < 4) myFace('shy', 3); }
   if (pr.fx && typeof pr.fx === 'object' && pr.fx.at !== p.lastFx){ p.lastFx = pr.fx.at; faceFx(p.fisher, String(pr.fx.k), 2.6); }
 }
+/* v1016 作者：「我看玩家跑的樣子卡卡的」→ 別人的位置大約每 0.12 秒才傳來一次（網路還會忽快忽慢），以前每收到一次就追過去、追到就停，看起來一頓一頓。
+   現在記住他移動的速度，兩次之間照速度繼續往前走（最多往前猜 0.35 秒），跑步動作也照速度算，不會一下跑一下停 */
+function peerVel(p, ox, oz){ const tn = now(), dtm = tn - (p.tAt || 0); p.tAt = tn; if (dtm > 1 || dtm <= 0.01){ p.vx = p.vz = 0; return; } const vx = (p.target.x - ox) / dtm, vz = (p.target.z - oz) / dtm; if (Math.hypot(vx, vz) > 14){ p.vx = p.vz = 0; return; } p.vx = (p.vx || 0) * 0.45 + vx * 0.55; p.vz = (p.vz || 0) * 0.45 + vz * 0.55; }
 function updatePeers(dt, t){
   for (const p of peers.values()){
-    const f = p.fisher; const dx = p.target.x - f.pos.x, dz = p.target.z - f.pos.z; const d = Math.hypot(dx, dz);
+    const f = p.fisher, age = Math.min(0.35, now() - (p.tAt || 0)); if (now() - (p.tAt || 0) > 0.35){ const dk = Math.exp(-8 * dt); p.vx = (p.vx || 0) * dk; p.vz = (p.vz || 0) * dk; }
+    const tx = p.target.x + (p.vx || 0) * age, tz = p.target.z + (p.vz || 0) * age, dx = tx - f.pos.x, dz = tz - f.pos.z; const d = Math.hypot(dx, dz), vs = Math.hypot(p.vx || 0, p.vz || 0);
     if (d > 8){ f.pos.x = p.target.x; f.pos.z = p.target.z; }
-    else { const k = 1 - Math.exp(-8*dt); f.pos.x += dx*k; f.pos.z += dz*k; }
-    f.speed += ((d > 0.05 ? Math.min(6, d*8) : 0) - f.speed) * Math.min(1, dt*8);
+    else { const k = 1 - Math.exp(-10*dt); f.pos.x += dx*k; f.pos.z += dz*k; }
+    f.speed += ((vs > 0.3 ? Math.min(6, vs) : d > 0.08 ? Math.min(6, d*6) : 0) - f.speed) * Math.min(1, dt*6);
     f.rot = lerpAngle(f.rot, p.rot, 1 - Math.exp(-10*dt));
     f.baseY += (p.y - f.baseY) * Math.min(1, dt*10);
     if (p.tr && W2 && W2.train){ const q = W2.train.seat(p.tr[0], p.tr[1]); if (q && Math.hypot(q.x - p.target.x, q.z - p.target.z) < 40){ f.pos.x = q.x; f.pos.z = q.z; f.baseY = q.y; f.rot = q.face; f.speed = 0; f.onTr = 1; } } else f.onTr = 0;   /* v923 坐小火車的人：直接放在我這邊同一班車的同一個位子（車的位置大家算出來一樣），不用等他一直傳位置過來 */
@@ -25632,6 +25639,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1016', d:'11/29', items:[['🌸','阿穎的聯名套裝改成他最愛的粉紅色「阿穎・櫻浪」，身上的光也變粉紅；已經買的人自動換成新顏色'], ['🐟','常見的小魚（3 公斤以下）釣起來不再摔在地上，直接順順地飛進手裡'], ['💬','掛著釣的時候，拉魚那一下聊天列會先收起來，不會擋住下面的張力條'], ['🏃','別人跑步不再一頓一頓：照他跑的速度順順地往前，跑步動作也不會一下跑一下停']] },
   { id:'u1015', d:'11/29', items:[['🤍','連帽衣多一款「雪白」設計（造型 → 衣櫃 → 上衣 → 連帽衣）'], ['🔈','修 iPhone 沒聲音：手指放開那一下才能開聲音，現在放開就會打開；音樂檔被手機擋住時，原本的音樂照樣放']] },
   { id:'u1014', d:'11/28', items:[['📞','好友旁邊的「呼叫」改成「📞 打電話」'], ['🔊','講電話對方的聲音放大很多，背景音樂會自動變小聲；喇叭按鈕可以換「一般 → 大聲 → 聽不到」'], ['🚩','檢舉按鈕寫出字、改成紅色；好友的「⋯」裡也可以檢舉'], ['📱','手機桌面的背景換成不刺眼的深色']] },
   { id:'u1013', d:'11/28', items:[['🎣','掛著釣不再每條都中：常見的魚也會脫鉤跑掉，沒裝鉤子大約 4 條跑 1 條'], ['🪝','阿鐵做的鉤子越好越少跑：倒刺鉤 18%、圓形鉤和鍛造重鉤 13%、金鉤 8%；釣竿磨損完多跑 10%'], ['💪','自己拉魚照舊，不受影響']] },
@@ -26220,7 +26228,7 @@ if (!NEWBIE) setTimeout(function nwait(){ if (!Boot.done) return setTimeout(nwai
 function ui3Init(){ if (!UI3.on) return; if (NEWBIE && !LS.get('tide.welcomed', false)){ const wt = () => { if (!Boot.done) return setTimeout(wt, 250); setTimeout(() => { if (!LS.get('tide.welcomed', false)) welcomeOpen(); }, 600); }; wt(); }   /* 進入畫面掀開以後才出現，背景才看得到村子 */ document.body.classList.add('ui3'); ui3Menu(); ui3Mini(); ui3Chat(); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike();
   const Bd = $('#brand'); if (Bd) Bd.addEventListener('click', () => setTimeout(ui3Place, 30));
   /* 紅點改到新的按鈕上 */
-  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle' && !(typeof AutoF !== 'undefined' && AutoF.on));   /* v1003 作者：「怎麼聊天？」→ 掛著釣的時候聊天列、聊天紀錄照樣顯示 */ document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread() + dmUnreadN(); try { dmTick(); } catch(e){} const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
+  setInterval(() => { try { document.body.classList.toggle('f3', F.phase !== 'idle' && !(typeof AutoF !== 'undefined' && AutoF.on && (F.phase === 'waiting' || F.phase === 'result')));   /* v1016 作者：「釣的時候下面那一排被聊天擋住」→ 掛著釣只有等魚的時候顯示聊天，拉魚時照樣收起來 */   /* v1003 作者：「怎麼聊天？」→ 掛著釣的時候聊天列、聊天紀錄照樣顯示 */ document.body.classList.toggle('nav3', !!(typeof Nav !== 'undefined' && Nav.t)); ui3Brand(); ui3Today(); ui3Pet(); ui3Bike(); ui3ChatFit(); orderBtn(); const n = (Fr.gifts || []).length + (Fr.req || []).length + phoneUnread() + dmUnreadN(); try { dmTick(); } catch(e){} const b = $('#menu .mbtn[data-group="ph"]'); if (b){ let d = $('.rdot', b); if (!n){ if (d) d.remove(); } else { if (!d){ d = document.createElement('i'); d.className = 'rdot'; b.appendChild(d); } d.textContent = n > 9 ? '9+' : String(n); } } } catch(e){} }, 1000);
   (function loop(){ try { if (frameNo % 6 === 0) ui3Place(); if (frameNo % 12 === 0) ui3ChatFit(); } catch(e){} requestAnimationFrame(loop); })(); }
 /* v339 左上的東西排成一直列，不會疊在一起：頭像（打開也算）→ 指引卡 →「今天」 */
 function ui3Place(){ const P = $('#today3'); if (!P) return; let y = 0; for (const id of ['brand', 'guideCard', 'menu']){ const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent && getComputedStyle(e).position !== 'fixed') continue; const r = e.getBoundingClientRect(); if (r.height && r.left < innerWidth / 2) y = Math.max(y, r.bottom); }
