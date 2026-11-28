@@ -2934,3 +2934,6 @@ body.scoping #labels,body.scoping #photoUI{display:none!important}
 .tag .nm.nfx-cying{background-image:linear-gradient(rgba(24,51,74,.88),rgba(24,51,74,.88)),linear-gradient(90deg,#ff7fb0,#ffffff,#ffb3cf,#ffffff,#ff7fb0);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #ff9ac4;background-size:100% 100%,200% 100%;animation:nfxSky 4s linear infinite}
 .tag .nm.nfx-cmo{background-image:linear-gradient(rgba(14,10,24,.92),rgba(14,10,24,.92)),linear-gradient(90deg,#3a1f7a,#8a5cff,#c7a8ff,#8a5cff,#3a1f7a);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #8a5cff;background-size:100% 100%,200% 100%;animation:nfxSky 5s linear infinite}
 .tag .nm.nfx-cwan{background-image:linear-gradient(rgba(10,14,18,.92),rgba(10,14,18,.92)),linear-gradient(90deg,#16161a,#3ff0e0,#9ffcf2,#3ff0e0,#16161a);background-origin:padding-box,border-box;background-clip:padding-box,border-box;box-shadow:0 0 12px #3ff0e0;background-size:100% 100%,200% 100%;animation:nfxSky 3s linear infinite}
+.ish-top .ish-box{font-size:18px;color:#5a3a14;padding:4px 6px}
+#sheet.boxonly header > :not(#closeSheet){display:none}
+body.ui3 #sheet.boxonly #tabs:not([hidden]), #sheet.boxonly #tabs{display:none!important}

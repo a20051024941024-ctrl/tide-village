@@ -9122,7 +9122,7 @@
  "📦 收起來": "📦 Store",
  "🧹 去收": "🧹 Go clear",
  "大箱子": "Big chest",
- "📦 大箱子": "📦 Big chest",
+ "📦 大箱子": "📦 Big Chest",
  "📦 空的": "📦 Empty",
  "拿出來不用錢": "Free to take out",
  "大箱子是空的": "The big chest is empty",
@@ -10090,5 +10090,9 @@
  "新魚也有喜歡的地方：大眼平鮋和星點笛鯛在礁石邊、長尾黑毛在棧橋柱子底下、海鱸在河口和棧橋、牛尾魚在河口": "New fish have favorite spots too: big-eye rockfish and star snapper by the rocks, long-tail girella under pier pilings, sea bass at river mouths and piers, flathead at river mouths",
  "⛴️ 從外島（苔森之島、冰封群島、深海浮台、神秘島、荒島）找阿海回村子，也會坐船一路開回新主島港口，不想等可以按「跳過」": "⛴️ Asking Ahai to take you home from an outer island (Mossy Isle, Frozen Isles, Deep-sea Platform, Mystic Isle, the castaway island) now sails all the way back to the main island harbor — tap \"Skip\" if you don't want to wait",
  "從苔森之島這些外島找阿海回村子，現在也會坐船開回來，不會一下就到了": "Going home from outer islands like Mossy Isle with Ahai now sails back by boat instead of arriving instantly",
- "修好有時候會跳出「遊戲出錯了… isReady」的錯誤": "Fixed an error that sometimes popped up: \"Game error… isReady\""
+ "修好有時候會跳出「遊戲出錯了… isReady」的錯誤": "Fixed an error that sometimes popped up: \"Game error… isReady\"",
+ "📦 小島碼頭旁的大箱子：打開只看得到箱子裡的東西（收起來的家具、拆下來的方塊），要買東西去小島商店": "📦 The big chest by the island pier: opening it shows only what's inside (stored furniture, removed blocks). To buy things, use the Island Shop",
+ "體育場拿掉以後，大看板的「隊伍足球」排行和名片上的足球、籃球、羽球戰績也一起拿掉了": "With the stadium gone, the \"Team Soccer\" ranking on the big board and the soccer, basketball and badminton records on profile cards are removed too",
+ "小島的大箱子打開只顯示箱子裡的東西，不會再出現商店分類": "Opening the big chest on your island now shows only what's inside, without the shop categories",
+ "🎱 撞球戰績": "🎱 Pool Record"
 }

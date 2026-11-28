@@ -7801,7 +7801,7 @@ function actionDown(){
     if (nearCage()){ act.classList.remove('down'); openSheet('cage'); return; }   /* 箱網 */
     if (nearSeedShop()){ act.classList.remove('down'); Farm.view = 'shop'; openSheet('farm'); return; }   /* 種子攤 */
     { const rd = nearRoomDoor(); if (rd && isleRank() >= 2){ act.classList.remove('down'); Room.door = rd; openSheet('roomsign'); return; } }   /* v887 門上掛名牌 */
-    if (nearChest()){ act.classList.remove('down'); isleTab = 'shop'; Isle2.cat = 'chest'; try { SFX.click(); } catch(e){} openSheet('island'); return; }   /* v886 大箱子 */
+    if (nearChest()){ act.classList.remove('down'); isleTab = 'shop'; Isle2.cat = 'chest'; Isle2.boxOnly = true; try { SFX.click(); } catch(e){} openSheet('island'); return; }   /* v886 大箱子 */   /* v1023 作者：「箱子只有東西不能買」→ 從箱子打開只看得到箱子裡的東西，沒有商店分類 */
     if (nearSeaDive()){ act.classList.remove('down'); seaDive(); return; }   /* 小島碼頭的潛水梯：下去海底花園 */
     { const fp = nearFarm(); if (fp){ act.classList.remove('down'); farmAct(fp); return; } }   /* 小島菜園 */
     { const fp = freeNear(); if (fp){ act.classList.remove('down'); freeAct(fp); return; } }   /* v876 自由種田 */
@@ -12389,6 +12389,7 @@ function viewModel(title, info, make, act){ closeModelView(); const ov = documen
 function closeModelView(){ if (!MView.on) return; MView.on = false; cancelAnimationFrame(MView.raf); try { MView.R.dispose(); MView.R.forceContextLoss(); } catch(e){} if (MView.ov) MView.ov.remove(); MView.R = MView.ov = null; }
 let isleTab = 'shop';
 function renderIsland(body){
+  if (Isle2.boxOnly){ const top = el('div', 'ish-top'); top.appendChild(el('b', 'ish-box', '📦 大箱子')); body.appendChild(top); Isle2.cat = 'chest'; isleChest2(body, isleItems(), true); return; }
   /* v884 上面只留一排：分頁＋金幣＋去小島／回村（以前標題、按鈕、分頁三排，商店被擠到下面） */
   const mine = onIsle && onIsle.owner === myIdOrMe(), top = el('div', 'ish-top'), seg = el('div', 'seg');
   /* v897 作者計畫第 1 步：「我的家／逛別人的島／島的大小」搬進手機的「⛵ 我的島」，小島商店只剩買東西 */
@@ -12460,7 +12461,7 @@ function ipvLoop(){ if (!IPV.cv || !IPV.cv.isConnected || $('#sheet').hidden){ I
   const c = IPV.c, r = IPV.rad * 3.6; IPV.cam.position.set(c.x + Math.sin(IPV.yaw) * r, c.y + r * 0.55, c.z + Math.cos(IPV.yaw) * r); IPV.cam.lookAt(c); IPV.r.render(IPV.sc, IPV.cam); IPV.raf = requestAnimationFrame(ipvLoop); }
 /* v887 「島上的東西」也照造型頁排：右邊一格一格（島上擺的東西、蓋的方塊），點一個左邊大圖，下面「移動」「收起來／拆掉」。長說明拿掉 */
 /* v886 📦 大箱子：收起來的東西、拆下來的方塊都在這裡（住在島上的人共用），拿出來擺不用錢 */
-function isleChest2(body, items){
+function isleChest2(body, items, boxOnly){
   const B = isleBagAll(), list = Object.entries(B).filter(([k, n]) => +n > 0 && (k.startsWith('b:') ? BLK[k.slice(2)] : ISLE_ITEMS[k]));
   let sel = Isle2.sel.chest; if (!list.some(([k]) => k === sel)) sel = Isle2.sel.chest = list.length ? list[0][0] : null;
   const wrap = el('div', 'closet k3pt ishop'), L = el('div', 'cl-l'), R2 = el('div', 'cl-r'); wrap.append(L, R2); body.appendChild(wrap);
@@ -12480,6 +12481,7 @@ function isleChest2(body, items){
     else { const v = ISLE_ITEMS[k], im = el('img', 'gearic'); im.alt = v.name; try { im.src = itemShot(k, 128); } catch(e){} b.appendChild(im); b.appendChild(el('span', 'n', v.name)); }
     b.appendChild(el('span', 'b k3pr', '×' + n)); b.addEventListener('click', () => { Isle2.sel.chest = k; renderTab(); }); grid.appendChild(b); }
   lst.appendChild(grid);
+  if (boxOnly) return;
   const tabs = el('div', 'cl-tabs'); for (const [k, i, l] of ISHOP_TABS){ const t = el('button', 'cl-tab' + (k === 'chest' ? ' on' : '')); t.append(el('span', 'i', i), el('span', 'n', k === 'mine' ? `${l}(${items.length + Blk.b.length})` : l)); t.addEventListener('click', () => { Isle2.cat = k; renderTab(); }); tabs.appendChild(t); } bar.appendChild(tabs);
 }
 function isleMine2(body, items, nh){
@@ -14854,7 +14856,7 @@ function cardDraw(c, r, peerId){ c.innerHTML = ''; c.classList.add('pcard', 'pca
   { const sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', '🐟 最得意的三種魚' + (r.picked ? '' : '（還沒選，先放最重的）')); if (isMe){ const pb = el('button', 'pc-more', r.picked ? '重選 ›' : '自己選 ›'); pb.addEventListener('click', () => cardPick(c, r, peerId)); st.appendChild(pb); } sec.appendChild(st);
     const ul = el('div', 'pc-top'); (Array.isArray(r.top) ? r.top : []).slice(0, 3).forEach((x, i) => { const fz = FISH_BY_ID[x.f]; if (!fz) return; const d = el('div', 'pc-fish'); d.appendChild(el('i', '', ['🥇', '🥈', '🥉'][i])); try { const fc = document.createElement('canvas'); fc.width = 160; fc.height = 100; fc.className = 'pc-fc'; d.appendChild(fc); setTimeout(() => { if (fc.isConnected){ try { drawFish(fc, fz.color, true, fz.id); } catch(e){} } }, 90 + i * 30); } catch(e){} d.appendChild(el('b', '', fz.name)); d.appendChild(el('span', '', `${(+x.w).toFixed(2)} kg`)); ul.appendChild(d); });
     if (!ul.children.length) ul.appendChild(el('p', 'sub', '還沒有釣到魚')); sec.appendChild(ul); P1.appendChild(sec); }
-  { const sp = r.sports || {}, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🏟 球類戰績')); const g = el('div', 'pc-stats pc-sport'); for (const [k, ic, lab] of [['soccer', '⚽', '足球'], ['basket', '🏀', '籃球'], ['badminton', '🏸', '羽球'], ['pool', '🎱', '撞球']]){ const x = k === 'pool' && (sp.pool || sp.zhe) ? { w: ((sp.pool || {}).w || 0) + ((sp.zhe || {}).w || 0), l: ((sp.pool || {}).l || 0) + ((sp.zhe || {}).l || 0) } : sp[k], d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', x ? `${x.w} 勝 ${x.l} 敗` : '—')); if (x && x.d) d.appendChild(el('span', '', `${x.d} 平`)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }   /* v544 */
+  { const sp = r.sports || {}, sec = el('div', 'pc-sec'); sec.appendChild(el('div', 'pc-st', '🎱 撞球戰績')); const g = el('div', 'pc-stats pc-sport'); for (const [k, ic, lab] of [['pool', '🎱', '撞球']]){   /* v1023 體育場拿掉了，足球、籃球、羽球的戰績不再顯示 */ const x = k === 'pool' && (sp.pool || sp.zhe) ? { w: ((sp.pool || {}).w || 0) + ((sp.zhe || {}).w || 0), l: ((sp.pool || {}).l || 0) + ((sp.zhe || {}).l || 0) } : sp[k], d = el('div', 'pc-stat'); d.appendChild(el('i', '', ic)); d.appendChild(el('span', '', lab)); d.appendChild(el('b', '', x ? `${x.w} 勝 ${x.l} 敗` : '—')); if (x && x.d) d.appendChild(el('span', '', `${x.d} 平`)); g.appendChild(d); } sec.appendChild(g); P2.appendChild(sec); }   /* v544 */
   /* 稱號、成就（自己的看得到全部；別人的只看得到他現在掛的稱號） */
   if (isMe){ try { const ts = myTitles(), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🎖 稱號　${ts.length} 個`); const mb = el('button', 'pc-more', '換稱號 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-chips'); for (const t of ts.slice(-8).reverse()) box.appendChild(el('span', 'pc-chip' + (t.name === title ? ' on' : ''), t.name)); if (!ts.length) box.appendChild(el('span', 'sub', '還沒有稱號')); sec.appendChild(box); P3.appendChild(sec); } catch(e){}
     try { const done = ACH.filter(a => { try { return a.cur() >= a.goal; } catch(e){ return false; } }), sec = el('div', 'pc-sec'); const st = el('div', 'pc-st', `🏅 成就　${done.length}／${ACH.length}`); const mb = el('button', 'pc-more', '看全部 ›'); mb.addEventListener('click', () => { duelCardClose('pcard'); openSheet('ach'); }); st.appendChild(mb); sec.appendChild(st); const box = el('div', 'pc-ach'); for (const a of done.slice(-8).reverse()){ const b = el('span', 'pc-medal', a.icon || '🏅'); b.title = a.name; box.appendChild(b); } if (!done.length) box.appendChild(el('span', 'sub', '還沒有完成的成就')); sec.appendChild(box); P3.appendChild(sec); } catch(e){} }
@@ -22320,9 +22322,10 @@ function teamTick(){ if (!Team.g && typeof houseBuilder !== 'undefined' && house
   if (Cloud.on && !Team.my && Date.now() - Team.at > 60000){ Team.at = Date.now(); loadTeam(); } }
 function renderTeamSheet(body){
   if (!Cloud.on){ body.appendChild(el('div', 'empty', '要連上線（登入）才看得到大看板和釣友隊。')); return; }
-  const seg = el('div', 'seg'); for (const [k, t] of [['board', '🏆 大看板'], ['duel', '⚔️ 對決排行'], ['tsport', '⚽ 隊伍足球'], ['team', '🎣 我的釣友隊']]){ const b = el('button', '', t); b.setAttribute('aria-pressed', String(Team.view === k)); b.addEventListener('click', () => { Team.view = k; renderTab(); }); seg.appendChild(b); } body.appendChild(seg);
+  const seg = el('div', 'seg'); for (const [k, t] of [['board', '🏆 大看板'], ['duel', '⚔️ 對決排行'], ['team', '🎣 我的釣友隊']]){ const b = el('button', '', t); b.setAttribute('aria-pressed', String(Team.view === k)); b.addEventListener('click', () => { Team.view = k; renderTab(); }); seg.appendChild(b); } body.appendChild(seg);
   const bar = (n, g) => { const o = el('div', 'tmbar'), i = el('i'); i.style.width = Math.round(Math.min(1, n / Math.max(1, g)) * 100) + '%'; if (n >= g) o.classList.add('ok'); o.appendChild(i); return o; };
   const chip = (t) => { const s = el('span', 'tmchip', TEAM_BADGE[t.badge % 16]); s.style.background = TEAM_COL[t.color % 8]; return s; };
+  if (Team.view === 'tsport') Team.view = 'board';   /* v1023 作者：「足球移掉」（體育場已經拿掉了） */
   if (Team.view === 'tsport'){ if (!Team.sp || Date.now() - (Team.spAt || 0) > 20000){ Team.spAt = Date.now(); festRpc('team_sport_top').then(r => { if (Array.isArray(r)){ Team.sp = r; if (!$('#sheet').hidden && curTab === 'tboard' && Team.view === 'tsport') renderTab(); } }); }   /* v544 「社會」那一層：釣友隊對釣友隊的足球排行 */
     body.appendChild(el('p', 'sub', '釣友隊對釣友隊的足球賽（體育場的比賽台開始，場上有兩支不同的釣友隊才算）。贏一場隊伍就多一勝；隊內的紅藍練習賽不算。'));
     body.appendChild(el('div', 'dexhead', '⚽ 隊伍足球排行（前 20 隊）')); const T = Team.sp; if (!T){ body.appendChild(el('div', 'empty', '載入中…')); return; } if (!T.length){ body.appendChild(el('p', 'sub', '還沒有隊伍打過隊對隊的足球賽，約另一隊去體育場踢一場吧！')); return; }
@@ -23828,7 +23831,7 @@ function hideOrphanBits(){ const L = [...npcs, ...customers.map(c => c.f), ...qu
 /* ================= SHEET ================= */
 let curTab = 'dex', tankSort = 'new';
 function openSheet(tab){ if (tab === 'map' && w2MapOn()){ w2MapOpen(); return; }   /* v954 人在新主島：開新地圖 */ SFX.click(); sheetOpenedAt = performance.now(); FishCard.t = 0; FishCard.edit = false; if ($('#sheet').hidden) renderTab.last = null; curTab = tab; $('#sheet').hidden = false; uiBlocked = true; for (const k in keys) keys[k] = false; renderTab(); }
-function closeSheet(){ closeModelView(); { const wp = $('#wsPick'), wo = $('#wsPop'); if (wp) wp.remove(); if (wo) wo.remove(); } try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
+function closeSheet(){ try { if (Isle2.boxOnly){ Isle2.boxOnly = false; Isle2.cat = 'house'; } } catch(e){} closeModelView(); { const wp = $('#wsPick'), wo = $('#wsPop'); if (wp) wp.remove(); if (wo) wo.remove(); } try { if (K3.real){ K3.tryEnd(); toast('沒買的造型換回原本的了'); } } catch(e){} if ($('#sheet').hidden) return; $('#sheet').hidden = true; Phone.via = false; uiBlocked = !$('#catchCard').hidden; canvas.focus(); }
 $$('#menu [data-tab]').forEach(b => b.addEventListener('click', () => openSheet(b.dataset.tab === 'style' ? 'closet' : b.dataset.tab)));   /* 選單的「造型」直接打開衣櫃 */
 $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.tab; renderTab(); }));
 $('#closeSheet').addEventListener('click', closeSheet);
@@ -23890,7 +23893,7 @@ function renderTab0(){
   { let h = $('#sheetTitle'); if (!h){ h = document.createElement('h2'); h.id = 'sheetTitle'; $('#sheet header').insertBefore(h, $('#closeSheet')); } h.textContent = SHEET_TITLE[curTab] || ''; }
   let body = $('#sheetBody'); body.textContent = '';
   if (renderTab.last !== curTab){ renderTab.last = curTab; body.scrollTop = 0; const bx = $('#sheet .box'); if (bx) bx.scrollTop = 0; }   /* v257 換頁時捲回最上面（從包包按「打開魚缸」不會停在下面） */
-  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island');   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
+  $('#sheet').classList.toggle('closet', curTab === 'closet'); $('#sheet').classList.toggle('ishopm', curTab === 'island'); $('#sheet').classList.toggle('boxonly', curTab === 'island' && !!Isle2.boxOnly);   /* v884 小島商店跟造型頁一樣撐滿 */ $('#sheet').classList.toggle('tk2on', TK2_ON && curTab === 'tank' && !FishCard.t && (!Tank2.view || Tank2.view === 'lab') && rec.tank.length > 0); $('#sheet').classList.toggle('phone', curTab === 'phone'); $('#sheet').classList.toggle('wsOn', curTab === 'craft'); { const wp = $('#wsPick'), wo = $('#wsPop'); if (curTab !== 'craft'){ if (wp) wp.remove(); if (wo) wo.remove(); } }
   { const own = curTab !== 'closet' && curTab !== 'phone' && curTab !== 'phfeed', wood = own && SHEET_WOOD.has(curTab); $('#sheet').classList.toggle('th-wood', wood); $('#sheet').classList.toggle('th-note', own && !wood); }   /* v639 介面換皮：店家木頭招牌、自己的東西筆記本 */
   try { phoneHdr(); } catch(e){}
   if (curTab === 'dex' && !LS.get('tide.guideDex', false)) LS.set('tide.guideDex', true);   /* v582 新手任務第 2 步 */
@@ -24250,6 +24253,7 @@ function renderTab0(){
       ["天氣、潮汐、季節", "event", ["天氣大家看到的都一樣。下雨魚好咬，起霧稀有魚多，暴風雨傳說魚多但很難拉。", "潮汐會漲會退。海邊、外海、小島漲潮時好釣。", "點右上角天氣那格看潮汐表和氣象預報。", "颱風來之前會發警報，那一小時魚咬得特別兇。", "颱風登陸時不能開船和潛水，但在海邊岸上釣得到深海魚。", "颱風過後沙灘上會沖上來東西，可以去撿。", "季節跟著現實的月份。現在是" + (SEASONS[SEASON].name) + "，每季有 6 種當季魚比較多。", "遊戲裡的一天是現實 36 分鐘。"],
         ["天氣大約每 9 分鐘換一次，潮汐大約 18 分鐘漲退一次。", "颱風大約一到兩週一次，都在中午到晚上之間。登陸 40 分鐘。過後一小時沙灘有 12 樣東西。", "當季魚多一倍。"]],
       ["村子怎麼走", "home", [
+      "📦 小島碼頭旁的大箱子：打開只看得到箱子裡的東西（收起來的家具、拆下來的方塊），要買東西去小島商店",
       "⛴️ 從外島（苔森之島、冰封群島、深海浮台、神秘島、荒島）找阿海回村子，也會坐船一路開回新主島港口，不想等可以按「跳過」",
       "🐟 真實魚：鬼頭刀、鯖魚、竹莢魚、石狗公、白帶魚、梭子魚、青甘、紅甘、鯷魚、雞魚、黑鯛、黑毛換成真的魚模型；新來 8 種：海鱸、大眼平鮋、馬加鰆、黃鰭鮪、牛尾魚、嘉鱲魚、長尾黑毛、星點笛鯛（外海和港口）","聯名活動週：阿穎週、阿默週、阿萬週輪流，每週日 00:00 換。這一週釣到的魚都算：20 條名牌框、40 條眼睛顏色、80 條聯名釣竿（甩竿有那個人顏色的光）、150 條整套聯名衣服。手機 → 活動 → 聯名活動，到了就按「領取」。", "水裡的地形：新主島的水裡有水草叢、礁石，還有棧橋的柱子底下、河流進海的河口。每個地方都有愛待在那裡的魚，浮標丟在旁邊那些魚就比較多。哪種魚在哪裡不會告訴你，要自己釣出經驗：同一種魚在同一種地方釣到 3 次，圖鑑那條魚會寫「常在：水草邊」。海面上以前的海鳥、漣漪、魚影、氣泡拿掉了。", "望遠鏡：釣具店「🧰工具」🪙1,200。買了之後打開手機點「🔭 望遠鏡」，或背包「🎣 釣組」→「拿出望遠鏡」。手指拖曳看四周，＋ 拉近。遠方偶爾會出現海豚、鯨魚、流星、燈籠船這些稀奇的東西，對準看一下就記進「📖 望遠鏡筆記」，不同時間和天氣看到的不一樣。十一種集滿拿「🔭 天空名牌」。", "釣到稀有、傳說的魚：拉出水那一下會慢動作、鏡頭推近，水面冒出一圈光（稀有藍、傳說金）。卡片上會寫「這裡大約每幾條才 1 條」，是照你現在的竿子、魚餌、時間、潮水算的。", "好友互整：走到好友旁邊（4 公尺內），點他頭上的話、或在好友分頁按他旁邊的「⋯」→「🐟 用魚拍一下」，就會甩一條魚拍他，他頭上轉星星、退一步，不會少任何東西。只有互相加好友的人能拍你，被拍了可以按「拍回去」。", "聊天：別人說的話會在頭上停久一點。點一下別人頭上的話，可以回一個表情（👍😂😮❤️👏），大家都看得到。附近有人釣到稀有的魚，畫面上會跳「👏 好厲害」，點一下就幫他拍手。", "掛著釣：甩竿後右邊的「🛋️ 掛著釣」點一下，常見的魚會自己拉上來、再自己甩竿；稀有的魚會響鈴叫你。走開就會停。掛著釣偶爾會脫鉤跑掉：沒裝鉤子大約 4 條跑 1 條，阿鐵做的鉤子越好越少跑（金鉤大約 12 條跑 1 條），釣竿磨損完會跑更多。", "聯名套裝：造型 → 衣櫃 → 上衣，最上面有阿萬、阿默、阿穎三套，整套 🪙2,500，穿整套身上會發光。", "好友語音：好友分頁 → 在線上的好友旁邊按 📞。接通後直接講就好，不想講話按「🎤 麥克風開」關掉，再按一下打開。不想被打就在好友分頁上面把「好友語音」關掉。", "甩竿特效：點左上角等級 →「甩竿特效」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的特效，浮標後面拖一道光，別人看得到。", "名牌框：點左上角等級 →「名牌框」。升到 Lv.10、20、30、50 和釣到傳說魚都會拿到新的框，名字外面一圈會發光，別人看得到。", "慢慢烏龜屋走進去，櫃台找龜博士做健康檢查；右邊的曬背燈台下雨天也能曬，後面水槽可以換水。家裡擺「曬背燈台」也能用燈曬。", "潮搭Go 的司機是阿萬。白天站在乘車處兩台車中間，晚上 7 點到 10 點收工去港口棧橋釣魚，有人叫車一樣會開過來。", "坐上自己的雙人划艇或四人釣魚小艇，附近 15 公尺內的人會跳出「一起上船？」，按「上船」就坐到空位，跟著你的船走。你下船時大家一起下到岸邊；坐別人船的人也可以自己按「下船」（要靠近岸邊）。", "港口西邊棧橋口的「潮汐船行」可以買船：單人獨木舟 🪙800、雙人划艇 🪙2,500、四人釣魚小艇 🪙8,000。買了的船停在西邊棧橋旁邊你自己的位子，走過去就能上船；有好幾艘可以在船行換要停哪一艘。", "跟朋友一起坐潮搭Go：你叫車的時候，附近 25 公尺內的人會跳出「一起坐？」，按「一起坐」就上同一台車（最多 3 個人）。待在車子附近，叫車的人上車時大家一起上，到了一起下車。", "附近可以坐的位子、店門、板子頭上會浮一個圓圓的小圖示，點哪個人就會自己走過去坐下、進門或打開；碰一下搖桿就停。站在旁邊時一樣可以按右下的大按鈕。", "畫廊、木工坊、寵物店、服裝店、烏龜屋晚上 10 點到早上 6 點休息（遊戲時間），老闆回家了；釣具店、魚市場、食堂、博物館照常開。", "阿潮、小溪、阿蘭靠釣魚過日子：每天上午十點、下午三點、晚上八點，會把釣到的魚走去中央市場賣掉。賣魚的錢存起來，夠了就去釣具店換新竿子、去阿綾那裡買新衣服，出門前也會買誘餌打窩。跟他們聊天，會告訴你今天賺多少、在存錢買什麼。", "一進來站在主城廣場，中間是噴水池，北邊是大看板。", "大看板輪流播村子裡的各種玩法和即將推出的新東西；走到大看板前面按「大看板」可以全螢幕看，左右滑換下一段。", "廣場北邊是村公所，東邊是中央市場（魚市場、訂單板），南邊是商店街，商店街走到底是港口。", "西邊是水族館和博物館，東北邊是潮汐娛樂館（撞球館、釣蝦場），東邊是體育場和沙灘。西北邊是森林，西邊是紅樹林，東邊的海上有珊瑚礁。", "島上有小火車，走到車站的月台就能坐。", "想去遠一點的地方：開地圖點那個地方，按「🚕 叫車」。阿萬的車平常停在圓環邊的「潮搭Go 乘車處」，叫車時從那裡沿著路開到你旁邊的路邊，站在原地等就好；人就在乘車處旁邊的話，直接走過去上車。坐車時車子整趟沿著路開、會轉彎、停紅燈，可以轉動畫面看風景；下車後阿萬會自己開回乘車處。不想等就按「⚡ 直接到」。", "大路是車道，四個大路口有紅綠燈。行人燈綠了再過馬路，村民也會等紅燈。", "找不到路就開地圖，點「找人、找店」會帶路。", "背包裡有一台腳踏車，拿出來就能騎。", "矮的東西按「跳」可以跳過去。", "村民會照自己的作息走動。老闆不在時店門口有牌子，照常可以買。", "村民在路上遇到別的村民會打招呼、停下來聊兩句。", "港口的阿默和阿穎常混在一起：阿默上岸就坐長椅一起打遊戲，出海時阿穎有時跟船一起釣，回來會比誰的魚比較大、比較稀有。"],
         ["地圖上灰色問號是還沒去過的地方。外島在地圖四邊，點一下會說怎麼去。", "車子到了會等你 90 秒。", "紅綠燈一輪 32 秒，每個人看到的燈號一樣。"]],
@@ -24266,8 +24270,6 @@ function renderTab0(){
         ["魚拓一張 200 金幣，同一條魚只能做一次，最多 40 張。", "每一區都集滿拿稱號「博物館榮譽館長」。"]],
       ["撞球", "social", ["撞球館在運動公園西南角，屋頂有顆黑八。", "走到球桌旁按「打撞球」。一個人是練習，別人過來按「對打」就變八號球。", "手指在桌面滑，球桿會轉。把左邊的力道條往下拉再放開就出桿。", "瞄不準用右邊的「微調」。", "先打進什麼球就打那一種，自己的七顆打完再打黑八。", "母球進袋、沒碰到球、先碰到對手的球都算犯規，對手可以把母球擺在任何地方。", "沒人的時候可以找常客阿喆打。"],
         ["對打每一桿 35 秒，連三次沒出桿算輸。", "自己的球還沒打完就打進黑八，直接輸。開球進黑八不算。", "牆上的黑板記八號球的勝敗，要登入才記。沒有獎勵。"]],
-      ["體育場", "social", ["從運動公園的大門進去。中間足球場，最西邊籃球，最東邊羽球。", "足球：跑過去碰到球就踢出去，靠近時按「射門」。到場邊的比賽台開比賽，要兩個人以上。", "籃球：按「投籃」，力道條跑到綠色再按一次。找旁邊的小桌子開 1 對 1。", "籃球防守：站在對手和籃框中間，靠近可以抄球，他要投的時候可以蓋火鍋。", "羽球：跑到地上的黃圈旁邊，球快落地時按「揮拍」。揮的時候往哪邊跑，球就往哪邊飛。", "勝敗會記在你的資料頁，沒有獎勵。"],
-        ["足球一場 3 分鐘。", "籃球 1 對 1 先拿 11 分的贏，一次進攻 14 秒。弧線內 2 分，外 3 分。抄球失敗 2 秒不能再抄。", "羽球先拿 7 分的贏。"]],
       ["滑雪", "social", ["冰封群島南邊有座雪山，山腳有小木屋和教練小嵐。", "到山腳東邊坐纜車上去。", "在山頂的門按「出發」。旁邊的人按「一起出發」就一起比。", "會自己往下滑。搖桿左右轉彎，往前蹲低比較快，往後煞車。", "要穿過每一道旗門。滑出雪道會變慢，撞到樹會摔倒。", "滑完一趟送毛球帽，滑得夠快再送滑雪鏡。"],
         ["漏掉一道旗門加 3 秒。", (SKI_GOG_S) + " 秒內滑完送滑雪鏡。", "按出發後等 6 秒才開始。"]],
       ["跟別人一起玩", "social", ["一進來就在村子裡，正在玩的人都看得到你。想只跟朋友玩就開私人房間。", "走到別人旁邊按「揮手」，他也揮回來，你們就算認識了。", "加好友：按「加好友」，或輸入他的 8 碼好友代碼。", "好友可以互相送魚、傳私訊、去對方的小島。", "好友在同一個大廳釣到稀有魚、傳說魚、變種，或破了自己的紀錄，你會跳出一張卡，按「👀 過去看」就到他旁邊。", "點別人的角色或名字看他的名片，可以直接邀對決。", "釣魚對決：3 分鐘比誰釣得重。按「找對手」是排位賽，會算段位。", "小組對決是 2 對 2。", "釣友隊：2 到 6 個人一隊，每週一起完成目標領獎。在廣場的大看板建立。", "地圖上可以做記號給大家看，例如這裡魚很多。", "廣場西邊有留言板。", "遇到不舒服的人，點他的名字可以封鎖或檢舉。", "聊天框左邊可以切「全部」和「附近」。"],
@@ -25703,6 +25705,7 @@ const PHONE_APPS = [
    UPD：新的放最前面，每一批 id 不能重複，一批最多 3 項，每項一句話＋要打開的頁面。只寫玩家看得到的新東西，修 bug 不寫。
    進遊戲時沒看過最新一批的老玩家會跳一張小卡（第一次玩的人不跳）；看過就記在 tide.updSeen。手機「最近更新」可以翻以前的。 ===== */
 const UPD = [
+  { id:'u1023', d:'11/29', items:[['⚽','體育場拿掉以後，大看板的「隊伍足球」排行和名片上的足球、籃球、羽球戰績也一起拿掉了'], ['📦','小島的大箱子打開只顯示箱子裡的東西，不會再出現商店分類']] },
   { id:'u1022', d:'11/29', items:[['⛴️','從苔森之島這些外島找阿海回村子，現在也會坐船開回來，不會一下就到了'], ['🛠️','修好有時候會跳出「遊戲出錯了… isReady」的錯誤']] },
   { id:'u1021', d:'11/29', items:[['🐟','鬼頭刀和 11 種海魚（鯖魚、竹莢魚、石狗公、白帶魚、梭子魚、青甘、紅甘、鯷魚、雞魚、黑鯛、黑毛）換成真的魚模型，鱗片、鰭都看得清楚'], ['🆕','新來 8 種魚：港口有海鱸、馬加鰆、黃鰭鮪、長尾黑毛；外海有大眼平鮋（晚上）、牛尾魚、嘉鱲魚、星點笛鯛'], ['🪨','新魚也有喜歡的地方：大眼平鮋和星點笛鯛在礁石邊、長尾黑毛在棧橋柱子底下、海鱸在河口和棧橋、牛尾魚在河口']] },
   { id:'u1020', d:'11/29', items:[['🔔','竿子插在竿架上走開時，魚咬了會響鈴，要在 15 秒內跑回來自己拉，竿架不再自己收魚'], ['🧺','跑船生意拿掉了：阿嬤不收魚了，船上還有魚的話，魚缸那裡可以拿去賣掉']] },

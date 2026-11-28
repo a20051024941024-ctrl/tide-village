@@ -8846,7 +8846,7 @@
  "📦 收起來": "📦 Simpan",
  "🧹 去收": "🧹 Bereskan",
  "大箱子": "Peti besar",
- "📦 大箱子": "📦 Peti besar",
+ "📦 大箱子": "📦 Peti Besar",
  "📦 空的": "📦 Kosong",
  "拿出來不用錢": "Gratis dikeluarkan",
  "大箱子是空的": "Peti besar kosong",
@@ -9814,5 +9814,9 @@
  "新魚也有喜歡的地方：大眼平鮋和星點笛鯛在礁石邊、長尾黑毛在棧橋柱子底下、海鱸在河口和棧橋、牛尾魚在河口": "Ikan baru juga punya tempat favorit: ikan batu mata besar dan kakap bintang di dekat batu, girella ekor panjang di bawah tiang dermaga, kakap laut di muara dan dermaga, ikan sebelah pasir di muara",
  "⛴️ 從外島（苔森之島、冰封群島、深海浮台、神秘島、荒島）找阿海回村子，也會坐船一路開回新主島港口，不想等可以按「跳過」": "⛴️ Meminta Ahai pulang dari pulau luar (Pulau Hutan Lumut, Kepulauan Beku, Panggung Laut Dalam, Pulau Misteri, Pulau Liar) kini berlayar sampai ke pelabuhan pulau utama — ketuk \"Lewati\" jika tidak mau menunggu",
  "從苔森之島這些外島找阿海回村子，現在也會坐船開回來，不會一下就到了": "Pulang dari pulau luar seperti Pulau Hutan Lumut bersama Ahai kini berlayar dengan kapal, tidak langsung tiba",
- "修好有時候會跳出「遊戲出錯了… isReady」的錯誤": "Memperbaiki galat yang kadang muncul: \"Game error… isReady\""
+ "修好有時候會跳出「遊戲出錯了… isReady」的錯誤": "Memperbaiki galat yang kadang muncul: \"Game error… isReady\"",
+ "📦 小島碼頭旁的大箱子：打開只看得到箱子裡的東西（收起來的家具、拆下來的方塊），要買東西去小島商店": "📦 Peti besar di dekat dermaga pulau: saat dibuka hanya menampilkan isinya (perabot yang disimpan, balok yang dibongkar). Untuk membeli barang, pakai Toko Pulau",
+ "體育場拿掉以後，大看板的「隊伍足球」排行和名片上的足球、籃球、羽球戰績也一起拿掉了": "Setelah stadion dihapus, peringkat \"Sepak Bola Tim\" di papan besar dan catatan sepak bola, basket, dan bulu tangkis di kartu profil juga dihapus",
+ "小島的大箱子打開只顯示箱子裡的東西，不會再出現商店分類": "Membuka peti besar di pulau kini hanya menampilkan isinya, tanpa kategori toko",
+ "🎱 撞球戰績": "🎱 Rekor Biliar"
 }
